@@ -1,4 +1,6 @@
-export const API_BASE_URL = 'https://happy-thoughts-api-4ful.onrender.com'
+export const API_BASE_URL =
+  window.REACT_APP_API_BASE_URL ||
+  'https://happy-thoughts-api-yn3p.onrender.com'
 
 // Simple request deduplication system
 const pendingRequests = new Map()
@@ -21,9 +23,11 @@ const deduplicateRequest = async (key, requestFn) => {
 }
 
 export const api = {
-  // Get all thoughts
-  getThoughts: async () => {
-    const response = await fetch(`${API_BASE_URL}/thoughts`)
+  // Get thoughts with pagination
+  getThoughts: async (page = 1, limit = 10) => {
+    const response = await fetch(
+      `${API_BASE_URL}/thoughts?page=${page}&limit=${limit}`
+    )
     if (!response.ok) {
       throw new Error(`API error: ${response.status}`)
     }

@@ -1,4 +1,5 @@
-import { useState, useEffect, useRef } from 'react'
+import { useEffect, useRef, useState, useCallback } from 'react'
+
 import { api } from '../api/api'
 
 export const useThoughts = () => {
@@ -7,38 +8,64 @@ export const useThoughts = () => {
   const [error, setError] = useState(null)
   const [newThoughtId, setNewThoughtId] = useState(null)
 
+  // Pagination state
+  const [page, setPage] = useState(1)
+  const [hasMore, setHasMore] = useState(true)
+  const [totalPages, setTotalPages] = useState(1)
+  const ITEMS_PER_PAGE = 10
+
   // Locks
   const isFetchingRef = useRef(false)
 
-  // Fetch all thoughts
-  const fetchThoughts = async () => {
-    // Prevent duplicate fetches
-    if (isFetchingRef.current) {
-      console.log('Fetch already in progress, skipping duplicate request')
-      return
-    }
-
-    isFetchingRef.current = true
-    setLoading(true)
-    setError(null)
-
-    try {
-      const data = await api.getThoughts()
-
-      // Check if data exists and has the expected structure
-      if (data && Array.isArray(data)) {
-        setThoughts(data)
-      } else {
-        console.error('Unexpected API response structure:', data)
-        setThoughts([])
-        setError('Unexpected data format from API')
+  // Fetch thoughts with pagination
+  const fetchThoughts = useCallback(
+    async (pageNum = page) => {
+      // Prevent duplicate fetches
+      if (isFetchingRef.current) {
+        console.log('Fetch already in progress, skipping duplicate request')
+        return
       }
-    } catch (error) {
-      console.error('Error fetching thoughts:', error)
-      setError('Failed to load happy thoughts. Please try again.')
-      setThoughts([])
-    } finally {
-      setLoading(false)
+
+      isFetchingRef.current = true
+      setLoading(true)
+      setError(null)
+
+      try {
+        const data = await api.getThoughts(pageNum, ITEMS_PER_PAGE)
+
+        // Check if data exists and has the expected structure
+        if (data && Array.isArray(data.thoughts)) {
+          if (pageNum === 1) {
+            setThoughts(data.thoughts)
+          } else {
+            // Append new thoughts to existing ones
+            setThoughts((prev) => [...prev, ...data.thoughts])
+          }
+
+          // Update pagination info
+          setHasMore(data.page < data.totalPages)
+          setTotalPages(data.totalPages)
+          setPage(data.page)
+        } else {
+          console.error('Unexpected API response structure:', data)
+          setThoughts([])
+          setError('Unexpected data format from API')
+        }
+      } catch (error) {
+        console.error('Error fetching thoughts:', error)
+        setError('Failed to load happy thoughts. Please try again.')
+      } finally {
+        setLoading(false)
+        isFetchingRef.current = false
+      }
+    },
+    [page]
+  )
+
+  // Load next page
+  const loadMore = () => {
+    if (hasMore && !loading) {
+      fetchThoughts(page + 1)
     }
   }
 
@@ -53,23 +80,29 @@ export const useThoughts = () => {
   const createAndRefresh = async (serverThought) => {
     console.log('createAndRefresh got:', serverThought)
     addThought(serverThought)
-    await fetchThoughts()
+    await fetchThoughts(1) // Reset to first page after adding a thought
   }
 
-  // Disable strict mode duplicate effect calls
-  const isInitialRender = useRef(true)
+  // Add this useEffect for initial data loading
+  const isInitialMount = useRef(true)
+
   useEffect(() => {
-    if (isInitialRender.current) {
-      fetchThoughts()
-      isInitialRender.current = false
+    // Prevent double fetching in React StrictMode
+    if (isInitialMount.current) {
+      fetchThoughts(1)
+      isInitialMount.current = false
     }
-  }, [])
+  }, [fetchThoughts])
 
   return {
     thoughts,
     loading,
     error,
     newThoughtId,
-    createAndRefresh
+    createAndRefresh,
+    loadMore,
+    hasMore,
+    page,
+    totalPages
   }
 }
