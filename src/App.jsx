@@ -21,6 +21,11 @@ export const App = () => {
       {thoughts.map((t) => (
         <Thought key={t._id} {...t} isNew={t._id === newThoughtId} />
       ))}
+      {serverStarting && (
+        <div className="server-starting">
+          The server is starting up. This may take 1-2 minutes...
+        </div>
+      )}
     </div>
   )
 }

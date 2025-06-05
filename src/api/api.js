@@ -29,13 +29,19 @@ const deduplicateRequest = async (key, requestFn) => {
 
 export const api = {
   // Get thoughts with pagination
-  getThoughts: async (page = 1, limit = 10) => {
+  getThoughts: async (page = 1, limit = 10, retryCount = 0) => {
     const url = `${API_BASE_URL}/thoughts?page=${page}&limit=${limit}`
     console.log('Fetching thoughts from:', url)
 
     try {
       const response = await fetch(url)
-      console.log('API response status:', response.status)
+
+      if (response.status === 503 && retryCount < 3) {
+        console.log('API server is starting up. Retrying in 5 seconds...')
+        // Wait 5 seconds and retry
+        await new Promise((resolve) => setTimeout(resolve, 5000))
+        return api.getThoughts(page, limit, retryCount + 1)
+      }
 
       if (!response.ok) {
         throw new Error(`API error: ${response.status}`)
@@ -61,6 +67,13 @@ export const api = {
         },
         body: JSON.stringify({ message })
       })
+
+      if (response.status === 503 && retryCount < 3) {
+        console.log('API server is starting up. Retrying in 5 seconds...')
+        // Wait 5 seconds and retry
+        await new Promise((resolve) => setTimeout(resolve, 5000))
+        return api.createThought(+1)
+      }
 
       if (!response.ok) {
         const data = await response.json().catch(() => ({}))
@@ -92,6 +105,14 @@ export const api = {
       const res = await fetch(`${API_BASE_URL}/thoughts/${id}/like`, {
         method: 'POST'
       })
+
+      if (response.status === 503 && retryCount < 3) {
+        console.log('API server is starting up. Retrying in 5 seconds...')
+        // Wait 5 seconds and retry
+        await new Promise((resolve) => setTimeout(resolve, 5000))
+        return api.likeThought()
+      }
+
       if (!res.ok) {
         // try to extract server error message
         const err = await res

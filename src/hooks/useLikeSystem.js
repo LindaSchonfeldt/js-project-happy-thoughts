@@ -12,10 +12,10 @@ export const useLikeSystem = (thoughtId, initialHearts) => {
   })
 
   // Update localStorage when like status changes
-  const updateLocalStorage = (liked) => {
+  const updateLocalStorage = (isLiked) => {
     const likedPosts = JSON.parse(localStorage.getItem('likedPosts') || '[]')
 
-    if (liked) {
+    if (isLiked) {
       if (!likedPosts.includes(thoughtId)) {
         localStorage.setItem(
           'likedPosts',

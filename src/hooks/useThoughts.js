@@ -4,7 +4,7 @@ import { api } from '../api/api'
 
 export const useThoughts = () => {
   const [thoughts, setThoughts] = useState([])
-  const [loading, setLoading] = useState(false)
+  const [isLoading, setLoading] = useState(false)
   const [error, setError] = useState(null)
   const [newThoughtId, setNewThoughtId] = useState(null)
 
@@ -64,7 +64,7 @@ export const useThoughts = () => {
 
   // Load next page
   const loadMore = () => {
-    if (hasMore && !loading) {
+    if (hasMore && !isLoading) {
       fetchThoughts(page + 1)
     }
   }
@@ -96,7 +96,7 @@ export const useThoughts = () => {
 
   return {
     thoughts,
-    loading,
+    loading: isLoading,
     error,
     newThoughtId,
     createAndRefresh,
