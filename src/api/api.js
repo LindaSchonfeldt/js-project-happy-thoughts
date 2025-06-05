@@ -27,6 +27,32 @@ const deduplicateRequest = async (key, requestFn) => {
   }
 }
 
+let retryDelay = 5000
+const maxRetries = 5
+
+const getWithRetry = async (url, retries = 0) => {
+  try {
+    const response = await fetch(url)
+    if (!response.ok) {
+      if (response.status === 503 && retries < maxRetries) {
+        console.log(
+          `Server starting up. Retry ${retries + 1}/${maxRetries} in ${
+            retryDelay / 1000
+          }s`
+        )
+        await new Promise((r) => setTimeout(r, retryDelay))
+        retryDelay = Math.min(retryDelay * 1.5, 30000) // Increase delay, max 30s
+        return getWithRetry(url, retries + 1)
+      }
+      throw new Error(`API error: ${response.status}`)
+    }
+    return response.json()
+  } catch (error) {
+    console.error(`Fetch failed (attempt ${retries + 1})`, error)
+    throw error
+  }
+}
+
 export const api = {
   // Get thoughts with pagination
   getThoughts: async (page = 1, limit = 10, retryCount = 0) => {

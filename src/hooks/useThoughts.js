@@ -7,6 +7,7 @@ export const useThoughts = () => {
   const [isLoading, setLoading] = useState(false)
   const [error, setError] = useState(null)
   const [newThoughtId, setNewThoughtId] = useState(null)
+  const [serverStarting, setServerStarting] = useState(false)
 
   // Pagination state
   const [page, setPage] = useState(1)
@@ -31,7 +32,7 @@ export const useThoughts = () => {
       setError(null)
 
       try {
-        const data = await api.getThoughts(pageNum, ITEMS_PER_PAGE)
+        const data = await api.getThoughts()
 
         // Check if data exists and has the expected structure
         if (data && Array.isArray(data.thoughts)) {
@@ -52,8 +53,11 @@ export const useThoughts = () => {
           setError('Unexpected data format from API')
         }
       } catch (error) {
-        console.error('Error fetching thoughts:', error)
-        setError('Failed to load happy thoughts. Please try again.')
+        if (error.message.includes('503')) {
+          setServerStarting(true)
+        } else {
+          setError(`Something went wrong: ${error.message}`)
+        }
       } finally {
         setLoading(false)
         isFetchingRef.current = false
@@ -103,6 +107,7 @@ export const useThoughts = () => {
     loadMore,
     hasMore,
     page,
-    totalPages
+    totalPages,
+    serverStarting
   }
 }
