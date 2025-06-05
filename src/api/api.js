@@ -4,6 +4,8 @@ export const API_BASE_URL =
 
 // Add debugging to see which URL is being used
 console.log('API Base URL:', API_BASE_URL)
+console.log('API URL being used:', API_BASE_URL)
+console.log('Environment variable value:', import.meta.env.VITE_API_BASE_URL)
 
 // Simple request deduplication system
 const pendingRequests = new Map()
@@ -28,13 +30,24 @@ const deduplicateRequest = async (key, requestFn) => {
 export const api = {
   // Get thoughts with pagination
   getThoughts: async (page = 1, limit = 10) => {
-    const response = await fetch(
-      `${API_BASE_URL}/thoughts?page=${page}&limit=${limit}`
-    )
-    if (!response.ok) {
-      throw new Error(`API error: ${response.status}`)
+    const url = `${API_BASE_URL}/thoughts?page=${page}&limit=${limit}`
+    console.log('Fetching thoughts from:', url)
+
+    try {
+      const response = await fetch(url)
+      console.log('API response status:', response.status)
+
+      if (!response.ok) {
+        throw new Error(`API error: ${response.status}`)
+      }
+
+      const data = await response.json()
+      console.log('API response data sample:', data)
+      return data
+    } catch (error) {
+      console.error('API fetch error:', error)
+      throw error
     }
-    return response.json()
   },
 
   // Post a new thought
