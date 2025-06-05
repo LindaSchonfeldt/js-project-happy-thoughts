@@ -6,7 +6,7 @@ import { GlobalStyles } from './GlobalStyles'
 import { useThoughts } from './hooks/useThoughts'
 
 export const App = () => {
-  const { thoughts, loading, error, newThoughtId, createAndRefresh } =
+  const { thoughts, loading, error, newThoughtId, createAndRefresh, serverStarting } =
     useThoughts()
 
   if (loading) return <Loader />
