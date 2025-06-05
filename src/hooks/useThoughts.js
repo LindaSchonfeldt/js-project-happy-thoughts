@@ -69,8 +69,8 @@ export const useThoughts = () => {
     }
   }
 
-  // Add new thought
-  const addThought = (newObj) => {
+  // Post new thought
+  const postThought = (newObj) => {
     setThoughts((prev) => [newObj, ...prev])
     setNewThoughtId(newObj._id)
     setTimeout(() => setNewThoughtId(null), 1000)
@@ -79,7 +79,7 @@ export const useThoughts = () => {
   // Combine optimistic add + full refetch
   const createAndRefresh = async (serverThought) => {
     console.log('createAndRefresh got:', serverThought)
-    addThought(serverThought)
+    postThought(serverThought)
     await fetchThoughts(1) // Reset to first page after adding a thought
   }
 

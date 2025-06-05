@@ -72,7 +72,7 @@ export const api = {
         console.log('API server is starting up. Retrying in 5 seconds...')
         // Wait 5 seconds and retry
         await new Promise((resolve) => setTimeout(resolve, 5000))
-        return api.createThought(+1)
+        return api.postThought(message, retryCount + 1)
       }
 
       if (!response.ok) {
