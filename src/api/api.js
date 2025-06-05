@@ -1,5 +1,5 @@
 export const API_BASE_URL =
-  window.REACT_APP_API_BASE_URL ||
+  process.env.VITE_API_BASE_URL ||
   'https://happy-thoughts-api-yn3p.onrender.com'
 
 // Simple request deduplication system
