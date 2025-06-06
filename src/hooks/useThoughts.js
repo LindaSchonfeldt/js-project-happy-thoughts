@@ -43,11 +43,20 @@ export const useThoughts = () => {
         ) {
           const { thoughts, currentPage, totalPages } = data.response
 
+          // Sort thoughts by creation date (newest first)
+          const sortedThoughts = thoughts.sort(
+            (a, b) => new Date(b.createdAt) - new Date(a.createdAt)
+          )
+
           if (pageNum === 1) {
-            setThoughts(thoughts) // Replace thoughts for the first page
+            setThoughts(sortedThoughts) // Replace thoughts for the first page
           } else {
-            // Append new thoughts to existing ones
-            setThoughts((prev) => [...prev, ...thoughts])
+            // Append new thoughts to existing ones and sort again
+            setThoughts((prev) =>
+              [...prev, ...sortedThoughts].sort(
+                (a, b) => new Date(b.createdAt) - new Date(a.createdAt)
+              )
+            )
           }
 
           // Update pagination info
