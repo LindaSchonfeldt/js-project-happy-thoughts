@@ -33,22 +33,24 @@ const maxRetries = 5
 const getWithRetry = async (url, retries = 0) => {
   try {
     const response = await fetch(url)
+
+    if ((response.status === 503 || response.status === 502) && retries < 3) {
+      console.log(
+        `API server is unavailable. Retrying in 5 seconds... (Attempt ${
+          retries + 1
+        }/3)`
+      )
+      await new Promise((resolve) => setTimeout(resolve, 5000))
+      return getWithRetry(url, retries + 1)
+    }
+
     if (!response.ok) {
-      if (response.status === 503 && retries < maxRetries) {
-        console.log(
-          `Server starting up. Retry ${retries + 1}/${maxRetries} in ${
-            retryDelay / 1000
-          }s`
-        )
-        await new Promise((r) => setTimeout(r, retryDelay))
-        retryDelay = Math.min(retryDelay * 1.5, 30000) // Increase delay, max 30s
-        return getWithRetry(url, retries + 1)
-      }
       throw new Error(`API error: ${response.status}`)
     }
-    return response.json()
+
+    return await response.json()
   } catch (error) {
-    console.error(`Fetch failed (attempt ${retries + 1})`, error)
+    console.error('API fetch error:', error)
     throw error
   }
 }
