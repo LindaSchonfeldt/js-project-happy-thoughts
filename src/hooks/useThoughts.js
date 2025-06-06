@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, useCallback } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 
 import { api } from '../api/api'
 
@@ -32,21 +32,28 @@ export const useThoughts = () => {
       setError(null)
 
       try {
-        const data = await api.getThoughts()
+        const data = await api.getThoughts(pageNum, ITEMS_PER_PAGE)
 
         // Check if data exists and has the expected structure
-        if (data && Array.isArray(data.thoughts)) {
+        if (
+          data &&
+          data.success &&
+          data.response &&
+          Array.isArray(data.response.thoughts)
+        ) {
+          const { thoughts, currentPage, totalPages } = data.response
+
           if (pageNum === 1) {
-            setThoughts(data.thoughts)
+            setThoughts(thoughts) // Replace thoughts for the first page
           } else {
             // Append new thoughts to existing ones
-            setThoughts((prev) => [...prev, ...data.thoughts])
+            setThoughts((prev) => [...prev, ...thoughts])
           }
 
           // Update pagination info
-          setHasMore(data.page < data.totalPages)
-          setTotalPages(data.totalPages)
-          setPage(data.page)
+          setHasMore(currentPage < totalPages)
+          setTotalPages(totalPages)
+          setPage(currentPage)
         } else {
           console.error('Unexpected API response structure:', data)
           setThoughts([])
