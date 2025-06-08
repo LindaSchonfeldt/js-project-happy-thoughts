@@ -1,4 +1,4 @@
-import { usePostThought } from '../hooks/usePostThought'
+import { useState } from 'react'
 import { Button } from './Button'
 import styled from 'styled-components'
 import { media } from '../media'
@@ -92,18 +92,56 @@ const StyledError = styled.div`
 // with usePostThought (hook) that handles the actual posting logic
 
 export const ThoughtForm = ({ onSubmit }) => {
-  // State variables and functions from the usePostThought hook
-  const {
-    message,
-    isPosting,
-    error,
-    remainingChars,
-    handleInputChange,
-    handleSubmit
-  } = usePostThought((newThought) => {
-    // This function will be called after successful posting
-    if (onSubmit) onSubmit(newThought)
-  })
+  const [message, setMessage] = useState('')
+  const [error, setError] = useState('')
+  const [isSubmitting, setIsSubmitting] = useState(false)
+
+  const handleSubmit = async (e) => {
+    e.preventDefault()
+
+    // Clear any previous errors
+    setError('')
+
+    // Get the message from the state or form
+    const messageToSubmit = message.trim()
+
+    // Validate the message
+    if (!messageToSubmit || messageToSubmit.length === 0) {
+      setError('Please enter a message')
+      return
+    }
+
+    if (messageToSubmit.length < 5) {
+      setError('Message must be at least 5 characters')
+      return
+    }
+
+    if (messageToSubmit.length > 140) {
+      setError('Message must be 140 characters or less')
+      return
+    }
+
+    try {
+      setIsSubmitting(true)
+
+      // Call the onSubmit prop with the message string
+      await onSubmit(messageToSubmit)
+
+      // Clear the form on success
+      setMessage('')
+    } catch (err) {
+      setError('Failed to post thought. Please try again.')
+      console.error('Form submission error:', err)
+    } finally {
+      setIsSubmitting(false)
+    }
+  }
+
+  const handleInputChange = (e) => {
+    setMessage(e.target.value)
+    // Clear error when user starts typing
+    if (error) setError('')
+  }
 
   return (
     <StyledThoughtForm>
@@ -114,24 +152,25 @@ export const ThoughtForm = ({ onSubmit }) => {
           placeholder='Type your happy thought here...'
           value={message}
           onChange={handleInputChange}
-          disabled={isPosting}
+          disabled={isSubmitting}
         />
         <StyledFooter>
-          <span className={`char-counter ${remainingChars < 0 ? 'error' : ''}`}>
-            {remainingChars} characters remaining
+          <span
+            className={`char-counter ${message.length > 140 ? 'error' : ''}`}
+          >
+            {message.length}/140
           </span>
-          {error && <div className='error-message'>{error}</div>}
         </StyledFooter>
-        {error && <StyledError>{error}</StyledError>}
         <Button
           text='❤️ Send Happy Thought ❤️'
           type='submit'
           disabled={
-            message.trim().length < 5 || remainingChars < 0 || isPosting
+            isSubmitting || message.trim().length === 0 || message.length > 140
           }
         >
-          {isPosting ? 'Posting...' : '❤️ Send Happy Thought'}
+          {isSubmitting ? 'Posting...' : '❤️ Send Happy Thought'}
         </Button>
+        {error && <StyledError>{error}</StyledError>}
       </StyledForm>
     </StyledThoughtForm>
   )

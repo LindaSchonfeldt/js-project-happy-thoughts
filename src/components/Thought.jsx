@@ -79,7 +79,14 @@ export const DateText = styled.span`
 // useLikeSystem (hook)  for like functionality,
 // and dateHelpers (helper) for date formatting
 
-export const Thought = ({ _id, message, isNew, hearts: init, createdAt }) => {
+export const Thought = ({
+  _id,
+  message,
+  isNew,
+  hearts: init,
+  createdAt,
+  onDelete
+}) => {
   const { isLiked, likeCount, handleLike } = useLikeSystem(_id, init)
 
   // Format the date for display
@@ -97,6 +104,13 @@ export const Thought = ({ _id, message, isNew, hearts: init, createdAt }) => {
       ? message.message || 'No message content' // Extract message text if it's an object
       : message // Use directly if it's a string
 
+  // Handle delete with confirmation
+  const handleDeleteThought = () => {
+    if (window.confirm('Are you sure you want to delete this thought?')) {
+      onDelete()
+    }
+  }
+
   return (
     <ThoughtContainer $isNew={isNew}>
       <ThoughtText>{displayMessage}</ThoughtText>
@@ -110,6 +124,7 @@ export const Thought = ({ _id, message, isNew, hearts: init, createdAt }) => {
           />
           <p>{`x ${displayLikeCount}`}</p>
         </LikeCounter>
+        <Button variant='icon' icon={'🗑️'} onClick={handleDeleteThought} />
         <DateText>{formattedDate}</DateText>
       </BottomSection>
     </ThoughtContainer>
