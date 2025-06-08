@@ -36,7 +36,7 @@ export const useLikeSystem = (thoughtId, initialHearts) => {
       setIsLiked(false)
       setLikeCount((prevCount) => prevCount - 1)
       updateLocalStorage(false)
-      return // TODO: Update to make API call for unlikig
+      return // TODO: Update to make API call for unliking
     }
 
     // For likes, update UI optimistically and make API call

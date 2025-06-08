@@ -7,24 +7,28 @@ export const StyledLoader = styled.div`
   flex-direction: column;
   justify-content: center;
   align-items: center;
-  height: ${(props) => (props.fullScreen ? '100vh' : '200px')};
-  width: ${(props) => (props.fullWidth ? '100%' : 'auto')};
+  position: ${(props) => (props.$fullScreen ? 'fixed' : 'relative')};
+  top: 0;
+  left: 0;
+  height: ${(props) => (props.$fullScreen ? '100vh' : '200px')};
+  width: ${(props) => (props.$fullScreen ? '100vw' : 'auto')};
   background-color: ${(props) =>
-    props.transparent ? 'transparent' : 'var(--color-background)'};
-  padding: ${(props) => props.padding || '0'};
+    props.$transparent ? 'transparent' : 'var(--color-background)'};
+  padding: ${(props) => props.$padding || '0'};
+  z-index: 1000; /* Ensure the loader is above other content */
 `
 
 const LoaderMessage = styled.p`
   margin-top: 16px;
-  font-size: ${(props) => props.fontSize || '16px'};
-  color: ${(props) => props.textColor || '#555'};
+  font-size: ${(props) => props.$fontSize || '16px'};
+  color: ${(props) => props.$textColor || '#555'};
   text-align: center;
 `
 
 export const Loader = ({
   // Animation options
   src = 'https://lottie.host/c109aa21-ec91-47e1-a1c5-60d07f9de45a/7g1tvlHHDZ.lottie',
-  size = 150,
+  size = 200,
 
   // Container options
   fullScreen = true,
@@ -72,13 +76,13 @@ export const Loader = ({
       />
 
       {message && (
-        <LoaderMessage textColor={textColor} fontSize={fontSize}>
+        <LoaderMessage $textColor={textColor} $fontSize={fontSize}>
           {message}
         </LoaderMessage>
       )}
 
       {showTimedMessage && showMessage && (
-        <LoaderMessage textColor={textColor} fontSize={fontSize}>
+        <LoaderMessage $textColor={textColor} $fontSize={fontSize}>
           {timedMessage}
         </LoaderMessage>
       )}

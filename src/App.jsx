@@ -4,12 +4,26 @@ import { Thought } from './components/Thought'
 import { LikeCounter } from './components/LikeCounter'
 import { GlobalStyles } from './GlobalStyles'
 import { useThoughts } from './hooks/useThoughts'
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
+import { api } from './api/api.js'
 
 export const App = () => {
   const { thoughts, loading, error, newThoughtId, createAndRefresh } =
     useThoughts()
   const [serverStarting, setServerStarting] = useState(false)
+  const [currentPage, setCurrentPage] = useState(1)
+  const [totalPages, setTotalPages] = useState(1)
+
+  const fetchThoughts = async (page) => {
+    const data = await api.getThoughts(page)
+    setThoughts(data.response.thoughts)
+    setCurrentPage(data.response.currentPage)
+    setTotalPages(data.response.totalPages)
+  }
+
+  useEffect(() => {
+    fetchThoughts(currentPage)
+  }, [currentPage])
 
   if (loading) return <Loader />
   if (error) return <div className='error'>{error}</div>

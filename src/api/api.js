@@ -1,11 +1,5 @@
 export const API_BASE_URL =
-  import.meta.env.VITE_API_BASE_URL ||
-  'https://happy-thoughts-api-yn3p.onrender.com'
-
-// Add debugging to see which URL is being used
-console.log('API Base URL:', API_BASE_URL)
-console.log('API URL being used:', API_BASE_URL)
-console.log('Environment variable value:', import.meta.env.VITE_API_BASE_URL)
+  import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000'
 
 // Simple request deduplication system
 const pendingRequests = new Map()
@@ -115,16 +109,17 @@ export const api = {
   },
 
   // Delete a thought
-  /*   deleteThought: async (id) => {
-    console.log('API: Deleting thought:', id)
+  deleteThought: async (id) => {
     const response = await fetch(`${API_BASE_URL}/thoughts/${id}`, {
       method: 'DELETE'
     })
+
     if (!response.ok) {
       throw new Error(`Failed to delete thought: ${response.status}`)
     }
+
     return response.json()
-  }, */
+  },
 
   // Like a thought
   likeThought: async (id) => {
@@ -150,5 +145,20 @@ export const api = {
       }
       return res.json()
     })
+  },
+
+  // Update an existing thought
+  updateThought: async (id, updatedMessage) => {
+    const response = await fetch(`${API_BASE_URL}/thoughts/${id}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ message: updatedMessage })
+    })
+
+    if (!response.ok) {
+      throw new Error(`Failed to update thought: ${response.status}`)
+    }
+
+    return response.json()
   }
 }
