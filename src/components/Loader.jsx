@@ -1,6 +1,6 @@
-import styled from 'styled-components'
 import { DotLottieReact } from '@lottiefiles/dotlottie-react'
-import { useState, useEffect } from 'react'
+import { useEffect, useState } from 'react'
+import styled from 'styled-components'
 
 export const StyledLoader = styled.div`
   display: flex;
@@ -19,10 +19,11 @@ export const StyledLoader = styled.div`
 `
 
 const LoaderMessage = styled.p`
-  margin-top: 16px;
+  text-align: center;
+  margin-top: 8px;
+  font-family: 'Roboto Mono', sans-serif;
   font-size: ${(props) => props.$fontSize || '16px'};
   color: ${(props) => props.$textColor || '#555'};
-  text-align: center;
 `
 
 export const Loader = ({

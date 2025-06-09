@@ -1,8 +1,9 @@
-import { useLikeSystem } from '../hooks/useLikeSystem'
-import { formatDate } from '../utils/dateHelpers'
-import { media } from '../media'
-import { Button } from './Button'
 import styled, { keyframes } from 'styled-components'
+
+import { useLikeSystem } from '../hooks/useLikeSystem'
+import { media } from '../media'
+import { formatDate } from '../utils/dateHelpers'
+import { Button } from './Button'
 
 const fadeIn = keyframes`
   from {
@@ -41,6 +42,31 @@ export const ThoughtContainer = styled.div`
     width: 500px;
   }
 `
+const Tag = styled.span`
+  background-color: #f0f0f0;
+  border: 1px solid #ccc;
+  border-radius: 12px;
+  padding: 2px 8px;
+  font-size: 10px;
+  color: #666;
+  font-weight: 500;
+  text-transform: lowercase;
+
+  &:before {
+    content: '#';
+    color: #999;
+  }
+`
+const Tags = styled.div`
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 4px;
+  margin-bottom: 8px;
+  flex-wrap: wrap; /* Allow tags to wrap to next line */
+`
+
 export const ThoughtText = styled.p`
   width: 100%;
   height: auto;
@@ -85,6 +111,7 @@ export const Thought = ({
   isNew,
   hearts: init,
   createdAt,
+  tags, // Add tags prop
   onDelete
 }) => {
   const { isLiked, likeCount, handleLike } = useLikeSystem(_id, init)
@@ -113,6 +140,11 @@ export const Thought = ({
 
   return (
     <ThoughtContainer $isNew={isNew}>
+      <Tags>
+        {tags &&
+          tags.length > 0 &&
+          tags.map((tag, index) => <Tag key={index}>{tag}</Tag>)}
+      </Tags>
       <ThoughtText>{displayMessage}</ThoughtText>
       <BottomSection>
         <LikeCounter>

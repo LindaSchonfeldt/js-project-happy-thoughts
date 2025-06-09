@@ -1,11 +1,12 @@
-import { useState, useEffect } from 'react'
+import { useEffect, useState } from 'react'
+
 import { api } from './api/api'
-import { Loader } from './components/Loader'
-import { ThoughtForm } from './components/ThoughtForm'
-import { Thought } from './components/Thought'
 import { LikeCounter } from './components/LikeCounter'
-import { GlobalStyles } from './GlobalStyles'
+import { Loader } from './components/Loader'
 import Pagination from './components/Pagination'
+import { Thought } from './components/Thought'
+import { ThoughtForm } from './components/ThoughtForm'
+import { GlobalStyles } from './GlobalStyles'
 
 export const App = () => {
   const [thoughts, setThoughts] = useState([])
@@ -42,7 +43,7 @@ export const App = () => {
     }
   }
 
-  // Function to create a new thought and refresh the list
+  // Function to create a new thought and update local state
   const createAndRefresh = async (message) => {
     try {
       console.log(
@@ -53,15 +54,20 @@ export const App = () => {
       )
 
       const result = await api.postThought(message)
-      console.log('Post thought result:', result) // Debug log
+      console.log('Post thought result:', result)
 
       if (result.success) {
-        setNewThoughtId(result.response._id)
-        console.log('New thought ID set:', result.response._id) // Debug log
+        const newThought = result.response
+        setNewThoughtId(newThought._id)
+        console.log('New thought ID set:', newThought._id)
 
-        // Refresh thoughts list
-        console.log('Refreshing thoughts list...') // Debug log
-        await fetchThoughts(1)
+        // Add the new thought to the TOP of the existing list
+        setThoughts((prevThoughts) => [newThought, ...prevThoughts])
+
+        // Update current page to 1 if we're on a different page
+        if (currentPage !== 1) {
+          setCurrentPage(1)
+        }
 
         // Clear the new thought highlight after 3 seconds
         setTimeout(() => {
@@ -138,6 +144,8 @@ export const App = () => {
           message={thought.message}
           hearts={thought.hearts}
           createdAt={thought.createdAt}
+          tags={thought.tags || []}
+          updatedAt={thought.updatedAt}
           isNew={thought._id === newThoughtId}
           onDelete={() => handleDeleteThought(thought._id)}
         />
