@@ -90,7 +90,9 @@ export const App = () => {
         // Update current page to 1 if we're on a different page
         if (currentPage !== 1) {
           setCurrentPage(1)
+          // The useEffect will handle fetching page 1 data
         }
+        // If we're already on page 1, no need to fetch again since we added locally
 
         // Clear the new thought highlight after 3 seconds
         setTimeout(() => {
