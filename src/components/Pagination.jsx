@@ -28,11 +28,17 @@ const PageButton = styled.button`
 
 const Pagination = ({ currentPage, totalPages, onPageChange }) => {
   const handlePrevious = () => {
-    if (currentPage > 1) onPageChange(currentPage - 1)
+    if (currentPage > 1) {
+      console.log('Going to previous page:', currentPage - 1)
+      onPageChange(currentPage - 1)
+    }
   }
 
   const handleNext = () => {
-    if (currentPage < totalPages) onPageChange(currentPage + 1)
+    if (currentPage < totalPages) {
+      console.log('Going to next page:', currentPage + 1)
+      onPageChange(currentPage + 1)
+    }
   }
 
   return (

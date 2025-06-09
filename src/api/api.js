@@ -43,6 +43,25 @@ export const api = {
 
       const data = await response.json()
       console.log('API response data sample:', data)
+
+      // Update logging to match actual structure
+      console.log(
+        'Total thoughts in response:',
+        data.response?.thoughts?.length || 'unknown'
+      )
+      console.log(
+        'Current page:',
+        data.response?.pagination?.current || 'not provided'
+      )
+      console.log(
+        'Total pages:',
+        data.response?.pagination?.pages || 'not provided'
+      )
+      console.log(
+        'Total count:',
+        data.response?.pagination?.total || 'not provided'
+      )
+
       return data
     } catch (error) {
       console.error('API fetch error:', error)

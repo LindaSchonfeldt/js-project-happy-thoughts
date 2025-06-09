@@ -17,27 +17,50 @@ export const App = () => {
   const [newThoughtId, setNewThoughtId] = useState(null)
   const [serverStarting, setServerStarting] = useState(false)
 
-  // Function to fetch thoughts (this is what was missing!)
   const fetchThoughts = async (page = 1) => {
     try {
+      console.log('fetchThoughts called with page:', page)
       setLoading(true)
       setError(null)
 
       const data = await api.getThoughts(page)
 
+      // Add detailed logging
+      console.log('=== FULL API RESPONSE ===')
+      console.log('data:', data)
+      console.log('data.response:', data.response)
+      console.log('data.response.pagination:', data.response.pagination)
+      console.log('========================')
+
       if (data.success) {
-        setThoughts(data.response.thoughts || data.response || [])
-        setCurrentPage(data.response.currentPage || page)
-        setTotalPages(data.response.totalPages || 1)
+        const thoughtsList = data.response.thoughts || []
+        const paginationData = data.response.pagination || {}
+
+        // Log each step
+        console.log('thoughtsList length:', thoughtsList.length)
+        console.log('paginationData:', paginationData)
+        console.log('paginationData.current:', paginationData.current)
+        console.log('paginationData.pages:', paginationData.pages)
+        console.log('paginationData.total:', paginationData.total)
+
+        setThoughts(thoughtsList)
+        setCurrentPage(paginationData.current || page)
+        setTotalPages(paginationData.pages || 1)
+
+        console.log(
+          'State updated - currentPage should be:',
+          paginationData.current
+        )
+        console.log(
+          'State updated - totalPages should be:',
+          paginationData.pages
+        )
+      } else {
+        console.log('API response not successful:', data)
       }
     } catch (err) {
       console.error('Error fetching thoughts:', err)
       setError('Failed to load thoughts')
-
-      // If it's a connection error, show server starting message
-      if (err.message.includes('fetch')) {
-        setServerStarting(true)
-      }
     } finally {
       setLoading(false)
     }
@@ -137,6 +160,7 @@ export const App = () => {
       <GlobalStyles />
       <ThoughtForm onSubmit={createAndRefresh} />
       <LikeCounter />
+
       {thoughts.map((thought) => (
         <Thought
           key={thought._id}
@@ -145,16 +169,22 @@ export const App = () => {
           hearts={thought.hearts}
           createdAt={thought.createdAt}
           tags={thought.tags || []}
-          updatedAt={thought.updatedAt}
           isNew={thought._id === newThoughtId}
           onDelete={() => handleDeleteThought(thought._id)}
         />
       ))}
-      <Pagination
-        currentPage={currentPage}
-        totalPages={totalPages}
-        onPageChange={setCurrentPage}
-      />
+
+      {/* Add Pagination - only show if more than 1 page */}
+      {totalPages > 1 && (
+        <Pagination
+          currentPage={currentPage}
+          totalPages={totalPages}
+          onPageChange={(newPage) => {
+            console.log('Changing to page:', newPage)
+            setCurrentPage(newPage) // This will trigger useEffect that fetches thoughts
+          }}
+        />
+      )}
       {serverStarting && (
         <div
           style={{
