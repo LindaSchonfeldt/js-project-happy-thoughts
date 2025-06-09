@@ -120,15 +120,43 @@ export const api = {
 
   // Delete a thought
   deleteThought: async (id) => {
-    const response = await fetch(`${API_BASE_URL}/thoughts/${id}`, {
-      method: 'DELETE'
-    })
+    console.log('API: Deleting thought with ID:', id)
 
-    if (!response.ok) {
-      throw new Error(`Failed to delete thought: ${response.status}`)
+    try {
+      const response = await fetch(`${API_BASE_URL}/thoughts/${id}`, {
+        method: 'DELETE',
+        headers: {
+          'Content-Type': 'application/json'
+        }
+      })
+
+      console.log('Delete response status:', response.status)
+      console.log('Delete response ok:', response.ok)
+
+      // Check if the thought was not found
+      if (response.status === 404) {
+        throw new Error('Thought not found - it may have already been deleted')
+      }
+
+      if (!response.ok) {
+        const errorData = await response.text()
+        console.error('Delete error response:', errorData)
+        throw new Error(
+          `Failed to delete thought: ${response.status} - ${errorData}`
+        )
+      }
+
+      // Some APIs return empty response for successful delete
+      const contentType = response.headers.get('content-type')
+      if (contentType && contentType.includes('application/json')) {
+        return await response.json()
+      } else {
+        return { success: true, message: 'Thought deleted successfully' }
+      }
+    } catch (error) {
+      console.error('Delete thought error:', error)
+      throw error
     }
-
-    return response.json()
   },
 
   // Update an existing thought

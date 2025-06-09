@@ -156,7 +156,11 @@ export const Thought = ({
           />
           <p>{`x ${displayLikeCount}`}</p>
         </LikeCounter>
-        <Button variant='icon' icon={'🗑️'} onClick={handleDeleteThought} />
+
+        {/* Only show delete button if onDelete is provided and not disabled */}
+        {onDelete && (
+          <Button variant='icon' icon={'🗑️'} onClick={handleDeleteThought} />
+        )}
         <DateText>{formattedDate}</DateText>
       </BottomSection>
     </ThoughtContainer>
