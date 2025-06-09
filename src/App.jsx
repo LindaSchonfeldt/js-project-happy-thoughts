@@ -25,23 +25,9 @@ export const App = () => {
 
       const data = await api.getThoughts(page)
 
-      // Add detailed logging
-      console.log('=== FULL API RESPONSE ===')
-      console.log('data:', data)
-      console.log('data.response:', data.response)
-      console.log('data.response.pagination:', data.response.pagination)
-      console.log('========================')
-
       if (data.success) {
         const thoughtsList = data.response.thoughts || []
         const paginationData = data.response.pagination || {}
-
-        // Log each step
-        console.log('thoughtsList length:', thoughtsList.length)
-        console.log('paginationData:', paginationData)
-        console.log('paginationData.current:', paginationData.current)
-        console.log('paginationData.pages:', paginationData.pages)
-        console.log('paginationData.total:', paginationData.total)
 
         setThoughts(thoughtsList)
         setCurrentPage(paginationData.current || page)
