@@ -21,46 +21,35 @@ const deduplicateRequest = async (key, requestFn) => {
   }
 }
 
+// Helper function - only add auth headers if token exists
+const getAuthHeaders = (requireAuth = false) => {
+  const token = localStorage.getItem('token')
+  const headers = { 'Content-Type': 'application/json' }
+
+  if (token || requireAuth) {
+    headers['Authorization'] = `Bearer ${token}`
+  }
+
+  return headers
+}
+
 export const api = {
-  // Get thoughts with pagination
+  // Get thoughts - NO authentication required
   getThoughts: async (page = 1, limit = 10, retryCount = 0) => {
     const url = `${API_BASE_URL}/thoughts?page=${page}&limit=${limit}`
     console.log('Fetching thoughts from:', url)
 
     try {
-      const response = await fetch(url)
-
-      if (response.status === 503 && retryCount < 3) {
-        console.log('API server is starting up. Retrying in 5 seconds...')
-        await new Promise((resolve) => setTimeout(resolve, 5000))
-        return api.getThoughts(page, limit, retryCount + 1)
-      }
+      const response = await fetch(url, {
+        method: 'GET',
+        headers: getAuthHeaders(false) // ← No auth required
+      })
 
       if (!response.ok) {
         throw new Error(`API error: ${response.status}`)
       }
 
       const data = await response.json()
-      console.log('API response data sample:', data)
-
-      // Update logging to match actual structure
-      console.log(
-        'Total thoughts in response:',
-        data.response?.thoughts?.length || 'unknown'
-      )
-      console.log(
-        'Current page:',
-        data.response?.pagination?.current || 'not provided'
-      )
-      console.log(
-        'Total pages:',
-        data.response?.pagination?.pages || 'not provided'
-      )
-      console.log(
-        'Total count:',
-        data.response?.pagination?.total || 'not provided'
-      )
-
       return data
     } catch (error) {
       console.error('API fetch error:', error)
@@ -68,7 +57,7 @@ export const api = {
     }
   },
 
-  // Post a new thought
+  // Post thought - NO authentication required (anonymous posting)
   postThought: async (message, retryCount = 0) => {
     console.log('API postThought called with:', {
       message,
@@ -89,9 +78,7 @@ export const api = {
       console.log('API: Posting thought:', message)
       const response = await fetch(`${API_BASE_URL}/thoughts`, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
+        headers: getAuthHeaders(false), // ← No auth required
         body: JSON.stringify({ message })
       })
 
@@ -112,12 +99,13 @@ export const api = {
     })
   },
 
-  // Like a thought
+  // Like thought - NO authentication required
   likeThought: async (id, retryCount = 0) => {
     console.log('API: Liking thought:', id)
     return deduplicateRequest(`like-${id}`, async () => {
       const response = await fetch(`${API_BASE_URL}/thoughts/${id}/like`, {
-        method: 'POST'
+        method: 'POST',
+        headers: getAuthHeaders(false) // ← No auth required
       })
 
       if (response.status === 503 && retryCount < 3) {
@@ -136,16 +124,14 @@ export const api = {
     })
   },
 
-  // Delete a thought
+  // Delete thought - REQUIRES authentication
   deleteThought: async (id) => {
     console.log('API: Deleting thought with ID:', id)
 
     try {
       const response = await fetch(`${API_BASE_URL}/thoughts/${id}`, {
         method: 'DELETE',
-        headers: {
-          'Content-Type': 'application/json'
-        }
+        headers: getAuthHeaders(true) // ← Auth required
       })
 
       console.log('Delete response status:', response.status)
@@ -154,6 +140,10 @@ export const api = {
       // Check if the thought was not found
       if (response.status === 404) {
         throw new Error('Thought not found - it may have already been deleted')
+      }
+
+      if (response.status === 401) {
+        throw new Error('You must be logged in to delete thoughts')
       }
 
       if (!response.ok) {
