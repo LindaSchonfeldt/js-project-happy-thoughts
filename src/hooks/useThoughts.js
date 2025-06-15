@@ -1,129 +1,135 @@
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useEffect, useState } from 'react'
 
 import { api } from '../api/api'
 
 export const useThoughts = () => {
   const [thoughts, setThoughts] = useState([])
-  const [isLoading, setLoading] = useState(false)
+  const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
+  const [currentPage, setCurrentPage] = useState(1)
+  const [totalPages, setTotalPages] = useState(1)
   const [newThoughtId, setNewThoughtId] = useState(null)
   const [serverStarting, setServerStarting] = useState(false)
 
-  // Pagination state
-  const [page, setPage] = useState(1)
-  const [hasMore, setHasMore] = useState(true)
-  const [totalPages, setTotalPages] = useState(1)
-  const ITEMS_PER_PAGE = 10
-
-  // Locks
-  const isFetchingRef = useRef(false)
-
-  // Fetch thoughts with pagination
-  const fetchThoughts = useCallback(
-    async (pageNum = page) => {
-      // Prevent duplicate fetches
-      if (isFetchingRef.current) {
-        console.log('Fetch already in progress, skipping duplicate request')
-        return
-      }
-
-      isFetchingRef.current = true
+  const fetchThoughts = async (page = 1, retryCount = 0) => {
+    try {
       setLoading(true)
       setError(null)
 
-      try {
-        const data = await api.getThoughts(pageNum, ITEMS_PER_PAGE)
+      const data = await api.getThoughts(page)
 
-        // Check if data exists and has the expected structure
-        if (
-          data &&
-          data.success &&
-          data.response &&
-          Array.isArray(data.response.thoughts)
-        ) {
-          const { thoughts, currentPage, totalPages } = data.response
+      if (data.success) {
+        const thoughtsList = data.response.thoughts || []
 
-          // Sort thoughts by creation date (newest first)
-          const sortedThoughts = thoughts.sort(
-            (a, b) => new Date(b.createdAt) - new Date(a.createdAt)
-          )
+        // Sort by creation date (newest first)
+        const sortedThoughts = thoughtsList.sort(
+          (a, b) => new Date(b.createdAt) - new Date(a.createdAt)
+        )
 
-          if (pageNum === 1) {
-            setThoughts(sortedThoughts) // Replace thoughts for the first page
-          } else {
-            // Append new thoughts to existing ones and sort again
-            setThoughts((prev) =>
-              [...prev, ...sortedThoughts].sort(
-                (a, b) => new Date(b.createdAt) - new Date(a.createdAt)
-              )
-            )
-          }
+        const paginationData = data.response.pagination || {}
 
-          // Update pagination info
-          setHasMore(currentPage < totalPages)
-          setTotalPages(totalPages)
-          setPage(currentPage)
-        } else {
-          console.error('Unexpected API response structure:', data)
-          setThoughts([])
-          setError('Unexpected data format from API')
-        }
-      } catch (error) {
-        if (error.message.includes('503')) {
-          setServerStarting(true)
-        } else {
-          setError(`Something went wrong: ${error.message}`)
-        }
-      } finally {
-        setLoading(false)
-        isFetchingRef.current = false
+        setThoughts(sortedThoughts)
+        setCurrentPage(paginationData.current || page)
+        setTotalPages(paginationData.pages || 1)
       }
-    },
-    [page]
-  )
+    } catch (err) {
+      console.error('Error fetching thoughts:', err)
 
-  // Load next page
-  const loadMore = () => {
-    if (hasMore && !isLoading) {
-      fetchThoughts(page + 1)
+      if (
+        err.message.includes('CORS') ||
+        err.message.includes('NetworkError')
+      ) {
+        setError(
+          'Unable to connect to server. Please check if the backend is running and CORS is configured for this domain.'
+        )
+      } else {
+        setError('Failed to load thoughts')
+      }
+    } finally {
+      setLoading(false)
     }
   }
 
-  // Post new thought
-  const postThought = (newObj) => {
-    setThoughts((prev) => [newObj, ...prev])
-    setNewThoughtId(newObj._id)
-    setTimeout(() => setNewThoughtId(null), 1000)
+  const createThought = async (message) => {
+    try {
+      console.log(
+        'Creating thought with message:',
+        message,
+        'Type:',
+        typeof message
+      )
+
+      const result = await api.postThought(message)
+      console.log('Post thought result:', result)
+
+      if (result.success) {
+        const newThought = result.response
+        setNewThoughtId(newThought._id)
+        console.log('New thought ID set:', newThought._id)
+
+        // Add the new thought to the TOP of the existing list
+        setThoughts((prevThoughts) => [newThought, ...prevThoughts])
+
+        // Update current page to 1 if we're on a different page
+        if (currentPage !== 1) {
+          setCurrentPage(1)
+          // The useEffect will handle fetching page 1 data
+        }
+
+        // Clear the new thought highlight after 3 seconds
+        setTimeout(() => {
+          setNewThoughtId(null)
+        }, 3000)
+      } else {
+        console.error('Post thought failed:', result)
+        setError('Failed to create thought')
+      }
+    } catch (err) {
+      console.error('Error creating thought:', err)
+      setError('Failed to create thought: ' + err.message)
+    }
   }
 
-  // Combine optimistic add + full refetch
-  const createAndRefresh = async (serverThought) => {
-    console.log('createAndRefresh got:', serverThought)
-    postThought(serverThought)
-    await fetchThoughts(1) // Reset to first page after adding a thought
+  const handleDeleteThought = async (thoughtId) => {
+    // Optimistically remove from UI first for better UX
+    const originalThoughts = thoughts
+    setThoughts((prevThoughts) =>
+      prevThoughts.filter((thought) => thought._id !== thoughtId)
+    )
+
+    try {
+      await api.deleteThought(thoughtId)
+      console.log('Thought deleted successfully')
+      setError(null)
+    } catch (err) {
+      console.error('Error deleting thought:', err)
+
+      if (err.message.includes('404') || err.message.includes('not found')) {
+        console.log('Thought was already deleted on server, keeping UI updated')
+      } else {
+        setThoughts(originalThoughts)
+        setError('Failed to delete thought. Please try again.')
+        setTimeout(() => setError(null), 3000)
+      }
+    }
   }
 
-  // Add this useEffect for initial data loading
-  const isInitialMount = useRef(true)
-
+  // Fetch thoughts when component mounts or page changes
   useEffect(() => {
-    // Prevent double fetching in React StrictMode
-    if (isInitialMount.current) {
-      fetchThoughts(1)
-      isInitialMount.current = false
-    }
-  }, [fetchThoughts])
+    fetchThoughts(currentPage)
+  }, [currentPage])
 
   return {
     thoughts,
-    loading: isLoading,
+    loading,
     error,
-    newThoughtId,
-    createAndRefresh,
-    loadMore,
-    hasMore,
-    page,
+    currentPage,
     totalPages,
-    serverStarting
+    newThoughtId,
+    serverStarting,
+    setCurrentPage,
+    createThought,
+    handleDeleteThought,
+    fetchThoughts
   }
 }

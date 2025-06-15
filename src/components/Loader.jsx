@@ -90,3 +90,14 @@ export const Loader = ({
     </StyledLoader>
   )
 }
+
+export const LoadingScreen = ({ message = 'Loading your thoughts...' }) => {
+  return (
+    <Loader
+      $fullScreen={true}
+      $transparent={false}
+      $padding='0'
+      message={message}
+    />
+  )
+}
