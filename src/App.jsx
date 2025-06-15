@@ -1,6 +1,9 @@
+import { useState } from 'react'
+
 import { LikeCounter } from './components/LikeCounter'
 import { Loader } from './components/Loader'
 import { LoginSignup } from './components/LoginSignup'
+import { LogoutButton } from './components/LogoutButton'
 import Pagination from './components/Pagination'
 import { Thought } from './components/Thought'
 import { ThoughtForm } from './components/ThoughtForm'
@@ -8,6 +11,8 @@ import { GlobalStyles } from './GlobalStyles'
 import { useThoughts } from './hooks/useThoughts'
 
 export const App = () => {
+  const [token, setToken] = useState(localStorage.getItem('token'))
+
   const {
     thoughts,
     loading,
@@ -17,9 +22,14 @@ export const App = () => {
     newThoughtId,
     serverStarting,
     setCurrentPage,
-    createThought, // Use the renamed function
-    handleDeleteThought // Now available from the hook
+    createThought,
+    handleDeleteThought
   } = useThoughts()
+
+  const handleLogout = () => {
+    localStorage.removeItem('token')
+    setToken(null)
+  }
 
   // Show loader while loading
   if (loading) {
@@ -51,11 +61,22 @@ export const App = () => {
     )
   }
 
+  // Show login if no token
+  if (!token) {
+    return (
+      <div className='App'>
+        <GlobalStyles />
+        <LoginSignup setToken={setToken} />
+      </div>
+    )
+  }
+
+  // Show main app if authenticated
   return (
     <div className='App'>
       <GlobalStyles />
-      <LoginSignup />
-      <ThoughtForm onSubmit={createThought} /> {/* Updated function name */}
+      <LogoutButton onLogout={handleLogout} />
+      <ThoughtForm onSubmit={createThought} />
       <LikeCounter />
       {thoughts.map((thought) => (
         <Thought
