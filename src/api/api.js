@@ -190,5 +190,62 @@ export const api = {
     }
 
     return response.json()
+  },
+
+  loginUser: async (credentials) => {
+    console.log(
+      'API: Logging in user:',
+      credentials.email || credentials.username
+    )
+
+    try {
+      const response = await fetch(`${API_BASE_URL}/login`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(credentials)
+      })
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}))
+        throw new Error(errorData.message || `Login failed: ${response.status}`)
+      }
+
+      const data = await response.json()
+      console.log('Login successful:', data)
+      return data
+    } catch (error) {
+      console.error('Login error:', error)
+      throw error
+    }
+  },
+
+  signupUser: async (userData) => {
+    console.log('API: Signing up user:', userData.email || userData.username)
+
+    try {
+      const response = await fetch(`${API_BASE_URL}/signup`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(userData)
+      })
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}))
+        throw new Error(
+          errorData.message || `Signup failed: ${response.status}`
+        )
+      }
+
+      const data = await response.json()
+      console.log('Signup successful:', data)
+      return data
+    } catch (error) {
+      console.error('Signup error:', error)
+      throw error
+    }
   }
 }

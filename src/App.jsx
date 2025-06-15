@@ -1,8 +1,6 @@
-import { useEffect, useState } from 'react'
-
-import { api } from './api/api'
 import { LikeCounter } from './components/LikeCounter'
 import { Loader } from './components/Loader'
+import { LoginSignup } from './components/LoginSignup'
 import Pagination from './components/Pagination'
 import { Thought } from './components/Thought'
 import { ThoughtForm } from './components/ThoughtForm'
@@ -56,6 +54,7 @@ export const App = () => {
   return (
     <div className='App'>
       <GlobalStyles />
+      <LoginSignup />
       <ThoughtForm onSubmit={createThought} /> {/* Updated function name */}
       <LikeCounter />
       {thoughts.map((thought) => (
