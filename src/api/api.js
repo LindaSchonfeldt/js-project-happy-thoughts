@@ -125,17 +125,22 @@ export const api = {
   },
 
   // Delete thought - REQUIRES authentication
-  deleteThought: async (id) => {
-    console.log('API: Deleting thought with ID:', id)
+  deleteThought: async (thoughtId) => {
+    console.log('API: Deleting thought with ID:', thoughtId)
 
     try {
-      const response = await fetch(`${API_BASE_URL}/thoughts/${id}`, {
-        method: 'DELETE',
-        headers: getAuthHeaders(true) // ← Auth required
-      })
+      const token = localStorage.getItem('token')
 
-      console.log('Delete response status:', response.status)
-      console.log('Delete response ok:', response.ok)
+      if (!token) {
+        throw new Error('You must be logged in to delete thoughts')
+      }
+
+      const response = await fetch(`${API_BASE_URL}/thoughts/${thoughtId}`, {
+        method: 'DELETE',
+        headers: {
+          Authorization: `Bearer ${token}` // Add this Authorization header
+        }
+      })
 
       // Check if the thought was not found
       if (response.status === 404) {
@@ -168,18 +173,39 @@ export const api = {
   },
 
   // Update an existing thought
-  updateThought: async (id, updatedMessage) => {
-    const response = await fetch(`${API_BASE_URL}/thoughts/${id}`, {
-      method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ message: updatedMessage })
-    })
+  updateThought: async (thoughtId, message) => {
+    try {
+      // Get token from localStorage
+      const token = localStorage.getItem('token')
 
-    if (!response.ok) {
-      throw new Error(`Failed to update thought: ${response.status}`)
+      if (!token) {
+        throw new Error('You must be logged in to update thoughts')
+      }
+
+      const response = await fetch(`${API_BASE_URL}/thoughts/${thoughtId}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}` // Add this Authorization header
+        },
+        body: JSON.stringify({ message })
+      })
+
+      if (response.status === 401) {
+        // Token expired or invalid
+        localStorage.removeItem('token') // Clear token
+        throw new Error('Your session has expired. Please log in again')
+      }
+
+      if (!response.ok) {
+        throw new Error(`Failed to update thought: ${response.status}`)
+      }
+
+      return await response.json()
+    } catch (error) {
+      console.error('Error updating thought:', error)
+      throw error
     }
-
-    return response.json()
   },
 
   loginUser: async (credentials) => {

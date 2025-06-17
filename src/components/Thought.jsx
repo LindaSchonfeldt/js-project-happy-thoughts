@@ -131,8 +131,14 @@ export const Thought = ({
 
   // Fix this line that causes the error - use the prop directly
   const thoughtPermissions = {
-    canUpdate: canUpdate({ user, isAnonymous }),
-    canDelete: canDelete({ user, isAnonymous })
+    canUpdate: canUpdate({
+      user: user || null,
+      isAnonymous: isAnonymous || true
+    }),
+    canDelete: canDelete({
+      user: user || null,
+      isAnonymous: isAnonymous || true
+    })
   }
 
   // For edit/update functionality
