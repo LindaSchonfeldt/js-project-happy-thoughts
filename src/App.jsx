@@ -24,7 +24,8 @@ export const App = () => {
     serverStarting,
     setCurrentPage,
     createThought,
-    handleDeleteThought
+    handleDeleteThought,
+    handleUpdateThought
   } = useThoughts()
 
   const handleLogout = () => {
@@ -130,9 +131,12 @@ export const App = () => {
           hearts={thought.hearts}
           createdAt={thought.createdAt}
           tags={thought.tags || []}
+          authorId={thought.user}
+          isAnonymous={thought.isAnonymous}
           isNew={thought._id === newThoughtId}
-          onDelete={() => handleDeleteThought(thought._id)}
-          canDelete={token} // Only show delete if logged in
+          canDelete={handleDeleteThought}
+          canUpdate={handleUpdateThought}
+          currentUserId={currentUserId}
         />
       ))}
 

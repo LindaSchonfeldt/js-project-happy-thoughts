@@ -121,22 +121,22 @@ export const Thought = ({
   _id,
   message,
   isNew,
-  hearts: init,
+  hearts: initialHearts,
   createdAt,
   tags,
-  userId,
-  isAnonymous,
-  onDelete,
-  onUpdate,
+  authorId = null,
+  isAnonymous = true,
+  canDelete,
+  canUpdate,
   currentUserId // Pass current user ID
 }) => {
-  const { isLiked, likeCount, handleLike } = useLikeSystem(_id, init)
-  const { canEdit, canDelete } = useThoughtAuthorization(currentUserId)
+  const { isLiked, likeCount, handleLike } = useLikeSystem(_id, initialHearts)
+  const { canUpdate, canDelete } = useThoughtAuthorization(currentUserId)
 
   // Get permissions for this specific thought
   const thoughtPermissions = {
-    canEdit: canEdit({ user, isAnonymous }),
-    canDelete: canDelete({ user, isAnonymous })
+    canUpdate: canUpdate({ userId: authorId, isAnonymous }),
+    canDelete: canDelete({ userId: authorId, isAnonymous })
   }
 
   const formattedDate = formatDate(createdAt)
@@ -158,7 +158,7 @@ export const Thought = ({
             tags.map((tag, index) => <Tag key={index}>{tag}</Tag>)}
         </Tags>
         {/* Only show edit button if user owns the thought */}
-        {thoughtPermissions.canUpdate && (
+        {canUpdate && (
           <Button variant='authed' text='Edit' onClick={handleUpdateThought} />
         )}
       </TopSection>
@@ -168,7 +168,7 @@ export const Thought = ({
       <BottomSection>
         <EditButton>
           {/* Only show delete button if user owns the thought */}
-          {thoughtPermissions.canDelete && (
+          {canDelete && (
             <Button
               variant='authed'
               text='Delete'
