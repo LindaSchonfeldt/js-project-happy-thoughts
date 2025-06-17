@@ -114,6 +114,28 @@ export const useThoughts = () => {
     }
   }
 
+  const getCurrentUserId = () => {
+    const token = localStorage.getItem('token')
+    if (!token) return null
+
+    try {
+      // Decode JWT to get user ID (basic decode, not verification)
+      const base64Url = token.split('.')[1]
+      const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/')
+      const jsonPayload = decodeURIComponent(
+        atob(base64)
+          .split('')
+          .map((c) => '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2))
+          .join('')
+      )
+      const decoded = JSON.parse(jsonPayload)
+      return decoded.userId || decoded.id || decoded.sub
+    } catch (error) {
+      console.error('Error decoding token:', error)
+      return null
+    }
+  }
+
   // Fetch thoughts when component mounts or page changes
   useEffect(() => {
     fetchThoughts(currentPage)
@@ -127,6 +149,7 @@ export const useThoughts = () => {
     totalPages,
     newThoughtId,
     serverStarting,
+    currentUserId: getCurrentUserId(),
     setCurrentPage,
     createThought,
     handleDeleteThought,

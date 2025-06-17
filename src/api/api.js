@@ -42,7 +42,7 @@ export const api = {
     try {
       const response = await fetch(url, {
         method: 'GET',
-        headers: getAuthHeaders(false) // ← No auth required
+        headers: getAuthHeaders(false)
       })
 
       if (!response.ok) {

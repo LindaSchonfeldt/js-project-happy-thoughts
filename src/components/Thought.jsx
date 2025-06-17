@@ -1,6 +1,7 @@
 import styled, { keyframes } from 'styled-components'
 
 import { useLikeSystem } from '../hooks/useLikeSystem'
+import { useThoughtAuthorization } from '../hooks/useThoughtAuthorization'
 import { media } from '../media'
 import { formatDate } from '../utils/dateHelpers'
 import { Button } from './Button'
@@ -67,40 +68,51 @@ const Tags = styled.div`
   flex-wrap: wrap; /* Allow tags to wrap to next line */
 `
 
-export const ThoughtText = styled.p`
+const ThoughtText = styled.p`
   width: 100%;
   height: auto;
-  padding: 8px;
+  padding: 16px 4px 16px 4px;
 `
-
-export const BottomSection = styled.div`
+const TopSection = styled.div`
   display: flex;
   flex-direction: row;
-  align-items: center;
+  align-items: flex-start;
+  justify-content: space-between;
+  width: 100%;
+`
+const BottomSection = styled.div`
+  display: flex;
+  flex-direction: row;
+  align-items: flex-end;
   justify-content: space-between;
   width: 100%;
 `
 
-export const LikeCounter = styled.div`
+const LikeCounter = styled.div`
   display: flex;
   flex-direction: row;
   align-items: center;
-  justify-content: flex-start;
+  justify-content: flex-end;
   gap: 4px;
   color: #333;
   font-size: 12px;
+`
+const EditButton = styled.div`
+  display: flex;
+  flex-direction: row;
+  align-items: flex-start;
+  gap: 8px;
 `
 
 export const DateText = styled.span`
   display: flex;
   flex-direction: row;
-  justify-content: flex-end;
+  justify-content: flex-start;
   color: #999;
   font-size: 11px;
   font-weight: 500;
   margin-left: auto;
 `
-
 // Message component to display individual messages with help from:
 // useLikeSystem (hook)  for like functionality,
 // and dateHelpers (helper) for date formatting
@@ -111,58 +123,72 @@ export const Thought = ({
   isNew,
   hearts: init,
   createdAt,
-  tags, // Add tags prop
-  onDelete
+  tags,
+  userId,
+  isAnonymous,
+  onDelete,
+  onUpdate,
+  currentUserId // Pass current user ID
 }) => {
   const { isLiked, likeCount, handleLike } = useLikeSystem(_id, init)
+  const { canEdit, canDelete } = useThoughtAuthorization(currentUserId)
 
-  // Format the date for display
+  // Get permissions for this specific thought
+  const thoughtPermissions = {
+    canEdit: canEdit({ user, isAnonymous }),
+    canDelete: canDelete({ user, isAnonymous })
+  }
+
   const formattedDate = formatDate(createdAt)
 
-  // Ensure likeCount is properly formatted for display
   const displayLikeCount =
-    typeof likeCount === 'object'
-      ? likeCount.hearts || 0 // Extract hearts property if it's an object
-      : likeCount // Use directly if it's a primitive value
+    typeof likeCount === 'object' ? likeCount.hearts || 0 : likeCount
 
-  // Ensure message is properly formatted for display
   const displayMessage =
     typeof message === 'object'
-      ? message.message || 'No message content' // Extract message text if it's an object
-      : message // Use directly if it's a string
-
-  // Handle delete with confirmation
-  const handleDeleteThought = () => {
-    if (window.confirm('Are you sure you want to delete this thought?')) {
-      onDelete()
-    }
-  }
+      ? message.message || 'No message content'
+      : message
 
   return (
     <ThoughtContainer $isNew={isNew}>
-      <Tags>
-        {tags &&
-          tags.length > 0 &&
-          tags.map((tag, index) => <Tag key={index}>{tag}</Tag>)}
-      </Tags>
+      <TopSection>
+        <Tags>
+          {tags &&
+            tags.length > 0 &&
+            tags.map((tag, index) => <Tag key={index}>{tag}</Tag>)}
+        </Tags>
+        {/* Only show edit button if user owns the thought */}
+        {thoughtPermissions.canUpdate && (
+          <Button variant='authed' text='Edit' onClick={handleUpdateThought} />
+        )}
+      </TopSection>
+
       <ThoughtText>{displayMessage}</ThoughtText>
+
       <BottomSection>
+        <EditButton>
+          {/* Only show delete button if user owns the thought */}
+          {thoughtPermissions.canDelete && (
+            <Button
+              variant='authed'
+              text='Delete'
+              onClick={handleDeleteThought}
+            />
+          )}
+        </EditButton>
+
         <LikeCounter>
+          <p>{`${displayLikeCount} x`}</p>
           <Button
             variant='icon'
             icon={'❤️'}
             onClick={handleLike}
             isLiked={isLiked}
           />
-          <p>{`x ${displayLikeCount}`}</p>
         </LikeCounter>
-
-        {/* Only show delete button if onDelete is provided and not disabled */}
-        {onDelete && (
-          <Button variant='icon' icon={'🗑️'} onClick={handleDeleteThought} />
-        )}
-        <DateText>{formattedDate}</DateText>
       </BottomSection>
+
+      <DateText>{formattedDate}</DateText>
     </ThoughtContainer>
   )
 }

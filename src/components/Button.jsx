@@ -8,10 +8,8 @@ export const StyledButton = styled.button`
   background-color: #ffadad;
   color: black;
   border: none;
-  border-radius: 40px;
+  padding: 4px;
   cursor: pointer;
-  padding: 10px;
-  margin: 12px 0;
 
   &:disabled {
     background-color: #ccc;
@@ -42,6 +40,21 @@ export const StyledButton = styled.button`
     `
     padding: 10px 20px;
     min-width: 120px;
+    
+    &:hover {
+      background-color: var(--color-secondary);
+    }
+    &:active {
+      background-color: var(--color-tertiary);
+    }
+  `}
+
+    ${(props) =>
+    (props.$variant === 'authed' || !props.$variant) &&
+    `
+    min-width: 20px;
+    background-color: transparent;
+    border: solid 1px black;
     
     &:hover {
       background-color: var(--color-secondary);
