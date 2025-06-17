@@ -124,22 +124,34 @@ export const App = () => {
       <ThoughtForm onSubmit={createThought} />
       <LikeCounter />
 
-      {thoughts.map((thought) => (
-        <Thought
-          key={thought._id}
-          _id={thought._id}
-          message={thought.message}
-          hearts={thought.hearts}
-          createdAt={thought.createdAt}
-          tags={thought.tags || []}
-          user={thought.user}
-          isAnonymous={thought.isAnonymous}
-          isNew={thought._id === newThoughtId}
-          canDelete={handleDeleteThought}
-          canUpdate={handleUpdateThought}
-          currentUserId={currentUserId}
-        />
-      ))}
+      {thoughts.map((thought) => {
+        // Add the console log right here
+        console.log('Thought data:', {
+          id: thought._id,
+          message: thought.message?.substring(0, 20),
+          user: thought.user,
+          userId: thought.userId, // Check both possible field names
+          isAnonymous: thought.isAnonymous,
+          owner: thought.owner // Check another possible field name
+        })
+
+        return (
+          <Thought
+            key={thought._id}
+            _id={thought._id}
+            message={thought.message}
+            hearts={thought.hearts}
+            createdAt={thought.createdAt}
+            tags={thought.tags || []}
+            user={thought.user}
+            isAnonymous={thought.isAnonymous}
+            isNew={thought._id === newThoughtId}
+            onDelete={handleDeleteThought}
+            onUpdate={handleUpdateThought}
+            currentUserId={currentUserId}
+          />
+        )
+      })}
 
       {totalPages > 1 && (
         <Pagination

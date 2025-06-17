@@ -137,18 +137,19 @@ export const useThoughts = () => {
   const getCurrentUserId = () => {
     const token = localStorage.getItem('token')
     if (!token) return null
-
+    
     try {
-      // Decode JWT to get user ID (basic decode, not verification)
+      // Basic JWT decode
       const base64Url = token.split('.')[1]
       const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/')
-      const jsonPayload = decodeURIComponent(
-        atob(base64)
-          .split('')
-          .map((c) => '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2))
-          .join('')
-      )
+      const jsonPayload = decodeURIComponent(atob(base64).split('').map(c => {
+        return '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2)
+      }).join(''))
+      
       const decoded = JSON.parse(jsonPayload)
+      console.log('Decoded token:', decoded) // See what's in the token
+      
+      // Check multiple possible user ID fields
       return decoded.userId || decoded.id || decoded.sub
     } catch (error) {
       console.error('Error decoding token:', error)

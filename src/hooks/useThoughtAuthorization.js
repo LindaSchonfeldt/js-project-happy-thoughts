@@ -1,28 +1,30 @@
 import { useMemo } from 'react'
 
 export const useThoughtAuthorization = (currentUserId) => {
-  const checkOwnership = useMemo(() => {
-    return (thought) => {
-      // Anonymous thoughts can't be edited
-      if (thought.isAnonymous) return false
+  console.log('Authorization with user ID:', currentUserId)
 
-      // Must be logged in
-      if (!currentUserId) return false
+  const checkOwnership = (thought) => {
+    // Add detailed logging
+    console.log('Checking ownership:', {
+      thought,
+      currentUserId,
+      isAnonymous: thought.isAnonymous,
+      thoughtUser: thought.user,
+      match: currentUserId === thought.user
+    })
 
-      // Must own the thought
-      if (!thought.user) return false
+    if (!currentUserId) return false
+    if (thought.isAnonymous) return false
+    if (!thought.user) return false
 
-      return currentUserId === thought.user
-    }
-  }, [currentUserId])
+    return currentUserId === thought.user
+  }
 
-  const canUpdate = (thought) => checkOwnership(thought)
-  const canDelete = (thought) => checkOwnership(thought)
+  const canUpdate = checkOwnership
+  const canDelete = checkOwnership
 
-  // Only permissions, NOT handlers
   return {
     canUpdate,
-    canDelete,
-    checkOwnership
+    canDelete
   }
 }

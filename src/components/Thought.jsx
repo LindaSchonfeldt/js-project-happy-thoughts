@@ -113,10 +113,6 @@ export const DateText = styled.span`
   font-weight: 500;
   margin-left: auto;
 `
-// Message component to display individual messages with help from:
-// useLikeSystem (hook)  for like functionality,
-// and dateHelpers (helper) for date formatting
-
 export const Thought = ({
   _id,
   message,
@@ -124,7 +120,7 @@ export const Thought = ({
   hearts: initialHearts,
   createdAt,
   tags,
-  authorId = null,
+  authorId = null, // ← Prop destructured as authorId
   isAnonymous = true,
   onDelete,
   onUpdate,
@@ -133,10 +129,20 @@ export const Thought = ({
   const { isLiked, likeCount, handleLike } = useLikeSystem(_id, initialHearts)
   const { canUpdate, canDelete } = useThoughtAuthorization(currentUserId)
 
+  // Add debugging
+  console.log('Thought permissions debug:', {
+    thoughtId: _id,
+    userField: user, // What's in the user field?
+    isAnonymous, // Is it marked anonymous?
+    currentUserId, // What's your user ID?
+    canUserUpdate: canUpdate({ user, isAnonymous }),
+    canUserDelete: canDelete({ user, isAnonymous })
+  })
+
   // Get permissions for this specific thought
   const thoughtPermissions = {
     canUpdate: canUpdate({ user: authorId, isAnonymous }), // ← Using canUpdate
-    canDelete: canDelete({ user: authorId, isAnonymous })
+    canDelete: canDelete({ user: authorId, isAnonymous }) // ← CORRECT
   }
 
   // For edit/update functionality
