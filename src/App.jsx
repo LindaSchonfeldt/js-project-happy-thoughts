@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 
 import { LikeCounter } from './components/LikeCounter'
 import { Loader } from './components/Loader'
@@ -12,6 +12,7 @@ import { useThoughts } from './hooks/useThoughts'
 
 export const App = () => {
   const [token, setToken] = useState(localStorage.getItem('token'))
+  const [user, setUser] = useState(null)
   const [showLogin, setShowLogin] = useState(false)
 
   const {
@@ -22,12 +23,40 @@ export const App = () => {
     totalPages,
     newThoughtId,
     serverStarting,
-    currentUserId,
     setCurrentPage,
     createThought,
     handleDeleteThought,
     handleUpdateThought
   } = useThoughts()
+
+  // Extract user info from token on mount or when token changes
+  useEffect(() => {
+    if (token) {
+      try {
+        // Basic JWT decode to get user info
+        const base64Url = token.split('.')[1]
+        const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/')
+        const jsonPayload = decodeURIComponent(
+          atob(base64)
+            .split('')
+            .map((c) => {
+              return '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2)
+            })
+            .join('')
+        )
+
+        const decoded = JSON.parse(jsonPayload)
+        setUser(decoded) // Store the user object
+        console.log('Decoded token user:', decoded)
+      } catch (error) {
+        console.error('Error decoding token:', error)
+      }
+    }
+  }, [token])
+
+  // Extract current user ID, trying multiple common field names
+  const currentUserId = user?.userId || user?.id || user?._id
+  console.log('Current user ID:', currentUserId)
 
   const handleLogout = () => {
     localStorage.removeItem('token')
@@ -125,14 +154,14 @@ export const App = () => {
       <LikeCounter />
 
       {thoughts.map((thought) => {
-        // Add the console log right here
+        // Debug log to see thought structure
         console.log('Thought data:', {
           id: thought._id,
           message: thought.message?.substring(0, 20),
           user: thought.user,
-          userId: thought.userId, // Check both possible field names
+          userId: thought.userId,
           isAnonymous: thought.isAnonymous,
-          owner: thought.owner // Check another possible field name
+          currentId: currentUserId
         })
 
         return (
@@ -143,12 +172,12 @@ export const App = () => {
             hearts={thought.hearts}
             createdAt={thought.createdAt}
             tags={thought.tags || []}
-            user={thought.user}
-            isAnonymous={thought.isAnonymous}
+            user={thought.user} // Pass the user ID from thought
+            isAnonymous={thought.isAnonymous || !thought.user}
             isNew={thought._id === newThoughtId}
             onDelete={handleDeleteThought}
             onUpdate={handleUpdateThought}
-            currentUserId={currentUserId}
+            currentUserId={currentUserId} // Pass current user ID from token
           />
         )
       })}

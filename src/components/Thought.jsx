@@ -120,7 +120,7 @@ export const Thought = ({
   hearts: initialHearts,
   createdAt,
   tags,
-  authorId = null, // ← Prop destructured as authorId
+  user = null, // ← Use this name to match the data structure
   isAnonymous = true,
   onDelete,
   onUpdate,
@@ -129,20 +129,10 @@ export const Thought = ({
   const { isLiked, likeCount, handleLike } = useLikeSystem(_id, initialHearts)
   const { canUpdate, canDelete } = useThoughtAuthorization(currentUserId)
 
-  // Add debugging
-  console.log('Thought permissions debug:', {
-    thoughtId: _id,
-    userField: user, // What's in the user field?
-    isAnonymous, // Is it marked anonymous?
-    currentUserId, // What's your user ID?
-    canUserUpdate: canUpdate({ user, isAnonymous }),
-    canUserDelete: canDelete({ user, isAnonymous })
-  })
-
-  // Get permissions for this specific thought
+  // Fix this line that causes the error - use the prop directly
   const thoughtPermissions = {
-    canUpdate: canUpdate({ user: authorId, isAnonymous }), // ← Using canUpdate
-    canDelete: canDelete({ user: authorId, isAnonymous }) // ← CORRECT
+    canUpdate: canUpdate({ user, isAnonymous }),
+    canDelete: canDelete({ user, isAnonymous })
   }
 
   // For edit/update functionality
