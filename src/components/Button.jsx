@@ -38,6 +38,7 @@ export const StyledButton = styled.button`
   ${(props) =>
     (props.$variant === 'text' || !props.$variant) &&
     `
+    border-radius: 16px;
     padding: 10px 20px;
     min-width: 120px;
     

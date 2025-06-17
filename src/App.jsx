@@ -12,7 +12,7 @@ import { useThoughts } from './hooks/useThoughts'
 
 export const App = () => {
   const [token, setToken] = useState(localStorage.getItem('token'))
-  const [showLogin, setShowLogin] = useState(false) // Add this state
+  const [showLogin, setShowLogin] = useState(false)
 
   const {
     thoughts,
@@ -22,6 +22,7 @@ export const App = () => {
     totalPages,
     newThoughtId,
     serverStarting,
+    currentUserId,
     setCurrentPage,
     createThought,
     handleDeleteThought,
@@ -131,7 +132,7 @@ export const App = () => {
           hearts={thought.hearts}
           createdAt={thought.createdAt}
           tags={thought.tags || []}
-          authorId={thought.user}
+          user={thought.user}
           isAnonymous={thought.isAnonymous}
           isNew={thought._id === newThoughtId}
           canDelete={handleDeleteThought}

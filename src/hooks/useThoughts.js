@@ -114,6 +114,26 @@ export const useThoughts = () => {
     }
   }
 
+  const handleUpdateThought = async (thoughtId, newMessage) => {
+    try {
+      const result = await api.updateThought(thoughtId, newMessage)
+
+      if (result.success) {
+        // Update the thought in the list
+        setThoughts((prevThoughts) =>
+          prevThoughts.map((thought) =>
+            thought._id === thoughtId
+              ? { ...thought, message: newMessage }
+              : thought
+          )
+        )
+      }
+    } catch (error) {
+      console.error('Error updating thought:', error)
+      setError('Failed to update thought')
+    }
+  }
+
   const getCurrentUserId = () => {
     const token = localStorage.getItem('token')
     if (!token) return null
@@ -153,6 +173,7 @@ export const useThoughts = () => {
     setCurrentPage,
     createThought,
     handleDeleteThought,
+    handleUpdateThought,
     fetchThoughts
   }
 }

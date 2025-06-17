@@ -126,17 +126,40 @@ export const Thought = ({
   tags,
   authorId = null,
   isAnonymous = true,
-  canDelete,
-  canUpdate,
-  currentUserId // Pass current user ID
+  onDelete,
+  onUpdate,
+  currentUserId
 }) => {
   const { isLiked, likeCount, handleLike } = useLikeSystem(_id, initialHearts)
   const { canUpdate, canDelete } = useThoughtAuthorization(currentUserId)
 
   // Get permissions for this specific thought
   const thoughtPermissions = {
-    canUpdate: canUpdate({ userId: authorId, isAnonymous }),
-    canDelete: canDelete({ userId: authorId, isAnonymous })
+    canUpdate: canUpdate({ user: authorId, isAnonymous }), // ← Using canUpdate
+    canDelete: canDelete({ user: authorId, isAnonymous })
+  }
+
+  // For edit/update functionality
+  const handleUpdateThought = () => {
+    if (!thoughtPermissions.canUpdate) {
+      alert('You can only edit your own thoughts')
+      return
+    }
+
+    // Your edit implementation
+    onUpdate(_id, 'New message')
+  }
+
+  // For delete functionality
+  const handleDeleteThought = () => {
+    if (!thoughtPermissions.canDelete) {
+      alert('You can only delete your own thoughts')
+      return
+    }
+
+    if (window.confirm('Are you sure you want to delete this thought?')) {
+      onDelete(_id)
+    }
   }
 
   const formattedDate = formatDate(createdAt)
@@ -158,7 +181,7 @@ export const Thought = ({
             tags.map((tag, index) => <Tag key={index}>{tag}</Tag>)}
         </Tags>
         {/* Only show edit button if user owns the thought */}
-        {canUpdate && (
+        {thoughtPermissions.canUpdate && (
           <Button variant='authed' text='Edit' onClick={handleUpdateThought} />
         )}
       </TopSection>
@@ -168,7 +191,7 @@ export const Thought = ({
       <BottomSection>
         <EditButton>
           {/* Only show delete button if user owns the thought */}
-          {canDelete && (
+          {thoughtPermissions.canDelete && (
             <Button
               variant='authed'
               text='Delete'

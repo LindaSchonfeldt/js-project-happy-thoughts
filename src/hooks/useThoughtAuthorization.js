@@ -1,4 +1,3 @@
-// src/hooks/useThoughtAuthorization.js
 import { useMemo } from 'react'
 
 export const useThoughtAuthorization = (currentUserId) => {
@@ -20,16 +19,10 @@ export const useThoughtAuthorization = (currentUserId) => {
   const canUpdate = (thought) => checkOwnership(thought)
   const canDelete = (thought) => checkOwnership(thought)
 
-  const getPermissions = (thought) => ({
-    canEdit: canUpdate(thought),
-    canDelete: canDelete(thought),
-    canLike: true // Anyone can like
-  })
-
+  // Only permissions, NOT handlers
   return {
-    canEdit: canUpdate,
+    canUpdate,
     canDelete,
-    getPermissions,
     checkOwnership
   }
 }
