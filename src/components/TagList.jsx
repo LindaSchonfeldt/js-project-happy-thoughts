@@ -2,9 +2,9 @@ import React from 'react'
 import styled from 'styled-components'
 
 const Tag = styled.span`
-  background-color: var(--color-primary);
-  border-radius: 12px;
-  padding: 2px 8px;
+  background-color: lightgray;
+  border-radius: 4px;
+  padding: 4px 8px;
   font-size: 10px;
   color: var(--color-text);
   font-weight: 500;

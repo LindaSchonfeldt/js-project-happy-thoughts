@@ -1,14 +1,16 @@
-import { Thought } from './Thought'
 import styled from 'styled-components'
 
-export const ThoughtsList = ({
+import { Thought } from './Thought'
+
+export default function ThoughtsList({
   thoughts,
   newThoughtId,
   onDelete,
+  onUpdate,
   fetchThoughts,
   currentPage,
   loading
-}) => {
+}) {
   return (
     <>
       <RefreshButton
@@ -17,16 +19,21 @@ export const ThoughtsList = ({
       >
         {loading ? 'Refreshing...' : 'Refresh Thoughts'}
       </RefreshButton>
-      {thoughts.map((thought) => (
+      {thoughts.map(t => (
         <Thought
-          key={thought._id}
-          _id={thought._id}
-          message={thought.message}
-          hearts={thought.hearts}
-          createdAt={thought.createdAt}
-          tags={thought.tags || []}
-          isNew={thought._id === newThoughtId}
-          onDelete={() => onDelete(thought._id)}
+          key={t._id}
+          _id={t._id}
+          message={t.message}
+          hearts={t.hearts}
+          createdAt={t.createdAt}
+          tags={t.tags}
+          themeTags={t.themeTags}
+          userId={t.userId}
+          username={t.username}
+          isAnonymous={!t.username}
+          isOwn={t.isOwn}
+          onDelete={() => onDelete(t._id)}
+          onUpdate={() => onUpdate(t)}
         />
       ))}
     </>

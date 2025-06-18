@@ -7,8 +7,8 @@ import { LoginSignup } from './components/LoginSignup'
 import { NavBar } from './components/NavBar'
 import { Pagination } from './components/Pagination'
 import { ServiceStatus } from './components/ServiceStatus'
-import { Thought } from './components/Thought'
 import { ThoughtForm } from './components/ThoughtForm'
+import ThoughtsList from './components/ThoughtsList'
 import { UpdateModal } from './components/UpdateModal'
 import { UserThoughts } from './components/UserThoughts'
 import { useThoughts } from './contexts/ThoughtsContext'
@@ -32,6 +32,7 @@ export const App = () => {
     createThought,
     deleteThought,
     updateThought,
+    fetchThoughts,
     setCurrentPage
   } = useThoughts()
 
@@ -180,30 +181,23 @@ export const App = () => {
         <ServiceStatus
           error={error}
           isLoading={loading && !serverStarting}
-          onRetry={() => {
-            fetchThoughts && fetchThoughts(currentPage)
-          }}
+          onRetry={() => fetchThoughts(currentPage)}
         />
 
         <Routes>
           <Route
             path='/'
-            element={thoughts.map((thought) => (
-              <Thought
-                key={thought._id}
-                _id={thought._id}
-                message={thought.message}
-                hearts={thought.hearts}
-                createdAt={thought.createdAt}
-                tags={thought.tags || []} // your client‐side hashtags
-                themeTags={thought.themeTags || []} // ← pass backend tags here
-                userId={thought.userId}
-                username={thought.username}
-                isNew={thought._id === newThoughtId}
+            element={
+              <ThoughtsList
+                thoughts={thoughts}
+                newThoughtId={newThoughtId}
                 onDelete={deleteThought}
                 onUpdate={handleOpenUpdateModal}
+                fetchThoughts={fetchThoughts}
+                currentPage={currentPage}
+                loading={loading}
               />
-            ))}
+            }
           />
           <Route path='/liked-thoughts' element={<LikedThoughts />} />
           <Route path='/user-thoughts' element={<UserThoughts />} />

@@ -11,13 +11,12 @@ export const ThoughtsProvider = ({ children }) => {
   const { getCurrentUserId } = useThoughtAuthorization()
   const currentUserId = getCurrentUserId()
 
-  const fetchThoughts = async () => {
+  const fetchThoughts = async (p = page) => {
     try {
-      const result = await api.getThoughts(page)
-      const enhanced = result.data.map((thought) => ({
-        ...thought,
-        // directly mark own‐thoughts, no undefined variable needed
-        isOwn: thought.userId === currentUserId
+      const result = await api.getThoughts(p)
+      const enhanced = result.data.map((t) => ({
+        ...t,
+        isOwn: t.userId === currentUserId
       }))
       setThoughts(enhanced)
     } catch (err) {
@@ -30,7 +29,13 @@ export const ThoughtsProvider = ({ children }) => {
   }, [page, currentUserId])
 
   return (
-    <ThoughtsContext.Provider value={{ thoughts, setPage }}>
+    <ThoughtsContext.Provider
+      value={{
+        thoughts,
+        setPage,
+        fetchThoughts
+      }}
+    >
       {children}
     </ThoughtsContext.Provider>
   )

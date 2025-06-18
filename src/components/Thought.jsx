@@ -5,8 +5,8 @@ import { useLikeSystem } from '../hooks/useLikeSystem'
 import { useThoughtAuthorization } from '../hooks/useThoughtAuthorization'
 import { media } from '../media'
 import { formatDate } from '../utils/dateHelpers'
-import { Button } from './Button'
 import { getThoughtWithEmoji, restoreEmoji } from '../utils/emojiUtils'
+import { Button } from './Button'
 import TagList from './TagList'
 
 const fadeIn = keyframes`
@@ -83,6 +83,10 @@ const LikeCounterStyled = styled.div`
   justify-content: flex-end;
   width: 100%;
 `
+const StyledUserName = styled.span`
+  font-weight: 600;
+  color: #333;
+`
 
 export const TimeStamp = styled.span`
   display: flex;
@@ -96,10 +100,10 @@ export const TimeStamp = styled.span`
 export const Thought = ({
   _id,
   message = '', // Add default value to prevent undefined error
-  isNew, // This should be passed from parent
+  isNew,
   hearts: initialHearts,
   createdAt,
-  tags = [], // Add default empty array
+  tags = [],
   themeTags = [],
   userId, // This is the thought creator's ID
   username,
@@ -113,7 +117,7 @@ export const Thought = ({
   // Get current user ID to compare with thought owner
   const currentUserId = getCurrentUserId()
 
-  // merge both arrays
+  // Merge both arrays
   const allTags = [...tags, ...themeTags]
 
   // Check if user owns this thought (can edit/delete)
@@ -130,7 +134,7 @@ export const Thought = ({
 
   // Extract tags from message if none provided
   const extractedTags =
-    tags && tags.length > 0 ? tags : message.match(/#[\w]+/g) || [] // Extract hashtags from message text
+    tags && tags.length > 0 ? tags : message.match(/#[\w]+/g) || []
 
   console.log(`Thought ${_id?.substring(0, 8)}: extracted tags=`, extractedTags)
 
@@ -192,7 +196,7 @@ export const Thought = ({
           </LikeCounterStyled>
         </ActionRow>
       </BottomSection>
-
+      <StyledUserName>{isAnonymous ? 'Anonymous' : username}</StyledUserName>
       <TimeStamp>{formattedDate}</TimeStamp>
     </ThoughtContainer>
   )
