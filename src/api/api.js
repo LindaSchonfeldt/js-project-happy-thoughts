@@ -263,7 +263,6 @@ export const api = {
       const responseBody = await response.text()
       console.log('Server response body:', responseBody)
 
-      // Try to parse as JSON if possible
       let jsonData
       try {
         jsonData = JSON.parse(responseBody)
@@ -271,7 +270,7 @@ export const api = {
         // Return in a consistent format that matches what your app expects
         return {
           success: jsonData.success,
-          response: jsonData.data, // Use 'data' if that's where the thought is
+          response: jsonData.response, // ← use `response` here
           message: jsonData.message
         }
       } catch (e) {

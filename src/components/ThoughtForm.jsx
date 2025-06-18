@@ -1,8 +1,9 @@
 import { useState } from 'react'
-import { Button } from './Button'
 import styled from 'styled-components'
+
 import { media } from '../media'
 import { sanitizeInput } from '../utils/inputUtils.js'
+import { Button } from './Button'
 
 export const StyledThoughtForm = styled.div`
   display: flex;

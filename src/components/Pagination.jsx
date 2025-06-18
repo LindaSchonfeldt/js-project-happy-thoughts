@@ -1,5 +1,4 @@
 import styled from 'styled-components'
-import { Button } from './Button'
 
 const StyledPagination = styled.div`
   display: flex;
