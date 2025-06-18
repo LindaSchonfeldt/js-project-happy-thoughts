@@ -26,7 +26,7 @@ const PageButton = styled.button`
   }
 `
 
-const Pagination = ({ currentPage, totalPages, onPageChange }) => {
+export const Pagination = ({ currentPage, totalPages, onPageChange }) => {
   const handlePrevious = () => {
     if (currentPage > 1) {
       console.log('Going to previous page:', currentPage - 1)
@@ -55,5 +55,3 @@ const Pagination = ({ currentPage, totalPages, onPageChange }) => {
     </StyledPagination>
   )
 }
-
-export default Pagination

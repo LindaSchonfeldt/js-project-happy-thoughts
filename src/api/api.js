@@ -33,14 +33,78 @@ const getAuthHeaders = (requireAuth = false) => {
   return headers
 }
 
+// Simple cache mechanism
+const cache = {
+  data: {},
+  set: function (key, data, ttl = 60000) {
+    this.data[key] = {
+      value: data,
+      expiry: Date.now() + ttl
+    }
+  },
+  get: function (key) {
+    const item = this.data[key]
+    if (!item) return null
+    if (Date.now() > item.expiry) {
+      delete this.data[key]
+      return null
+    }
+    return item.value
+  }
+}
+
+const fetchWithTimeout = (url, options, timeout = 10000) => {
+  return Promise.race([
+    fetch(url, options),
+    new Promise((_, reject) =>
+      setTimeout(() => reject(new Error('Request timeout')), timeout)
+    )
+  ])
+}
+
+// Helper function
+const fetchWithRetry = async (url, options, retries = 3) => {
+  let lastError
+
+  for (let i = 0; i < retries; i++) {
+    try {
+      return await fetchWithTimeout(url, options)
+    } catch (error) {
+      console.log(`API request failed (attempt ${i + 1}/${retries})`, error)
+      lastError = error
+
+      // Only retry on network errors, not HTTP errors
+      if (
+        !error.message.includes('NetworkError') &&
+        !error.message.includes('timeout')
+      ) {
+        throw error
+      }
+
+      // Wait before retrying (with increasing delay)
+      await new Promise((r) => setTimeout(r, 1000 * (i + 1)))
+    }
+  }
+
+  throw lastError
+}
+
 export const api = {
   // Get thoughts - NO authentication required
   getThoughts: async (page = 1, limit = 10, retryCount = 0) => {
+    const cacheKey = `thoughts_${page}_${limit}`
+    const cachedData = cache.get(cacheKey)
+
+    if (cachedData) {
+      console.log('Using cached thoughts data')
+      return cachedData
+    }
+
     const url = `${API_BASE_URL}/thoughts?page=${page}&limit=${limit}`
     console.log('Fetching thoughts from:', url)
 
     try {
-      const response = await fetch(url, {
+      const response = await fetchWithRetry(url, {
         method: 'GET',
         headers: getAuthHeaders(false)
       })
@@ -50,6 +114,12 @@ export const api = {
       }
 
       const data = await response.json()
+
+      // Cache the results
+      if (data.success) {
+        cache.set(cacheKey, data, 30000) // Cache for 30 seconds
+      }
+
       return data
     } catch (error) {
       console.error('API fetch error:', error)
@@ -76,7 +146,7 @@ export const api = {
 
     return deduplicateRequest(`post-${message}`, async () => {
       console.log('API: Posting thought:', message)
-      const response = await fetch(`${API_BASE_URL}/thoughts`, {
+      const response = await fetchWithRetry(`${API_BASE_URL}/thoughts`, {
         method: 'POST',
         headers: getAuthHeaders(false), // ← No auth required
         body: JSON.stringify({ message })
@@ -103,10 +173,13 @@ export const api = {
   likeThought: async (id, retryCount = 0) => {
     console.log('API: Liking thought:', id)
     return deduplicateRequest(`like-${id}`, async () => {
-      const response = await fetch(`${API_BASE_URL}/thoughts/${id}/like`, {
-        method: 'POST',
-        headers: getAuthHeaders(false) // ← No auth required
-      })
+      const response = await fetchWithRetry(
+        `${API_BASE_URL}/thoughts/${id}/like`,
+        {
+          method: 'POST',
+          headers: getAuthHeaders(false) // ← No auth required
+        }
+      )
 
       if (response.status === 503 && retryCount < 3) {
         console.log('API server is starting up. Retrying in 5 seconds...')
@@ -135,12 +208,15 @@ export const api = {
         throw new Error('You must be logged in to delete thoughts')
       }
 
-      const response = await fetch(`${API_BASE_URL}/thoughts/${thoughtId}`, {
-        method: 'DELETE',
-        headers: {
-          Authorization: `Bearer ${token}` // Add this Authorization header
+      const response = await fetchWithRetry(
+        `${API_BASE_URL}/thoughts/${thoughtId}`,
+        {
+          method: 'DELETE',
+          headers: {
+            Authorization: `Bearer ${token}` // Add this Authorization header
+          }
         }
-      })
+      )
 
       // Check if the thought was not found
       if (response.status === 404) {
@@ -182,14 +258,17 @@ export const api = {
         throw new Error('You must be logged in to update thoughts')
       }
 
-      const response = await fetch(`${API_BASE_URL}/thoughts/${thoughtId}`, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}` // Add this Authorization header
-        },
-        body: JSON.stringify({ message })
-      })
+      const response = await fetchWithRetry(
+        `${API_BASE_URL}/thoughts/${thoughtId}`,
+        {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${token}`
+          },
+          body: JSON.stringify({ message })
+        }
+      )
 
       if (response.status === 401) {
         // Token expired or invalid
@@ -212,7 +291,7 @@ export const api = {
     console.log('API: Logging in user:', credentials.username)
 
     try {
-      const response = await fetch(`${API_BASE_URL}/users/login`, {
+      const response = await fetchWithRetry(`${API_BASE_URL}/users/login`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'
@@ -238,7 +317,7 @@ export const api = {
     console.log('API: Signing up user:', userData.username)
 
     try {
-      const response = await fetch(`${API_BASE_URL}/users/signup`, {
+      const response = await fetchWithRetry(`${API_BASE_URL}/users/signup`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'
@@ -258,6 +337,51 @@ export const api = {
       return data
     } catch (error) {
       console.error('Signup error:', error)
+      throw error
+    }
+  },
+
+  // Check API connection
+  isConnected: async () => {
+    try {
+      const controller = new AbortController()
+      const timeoutId = setTimeout(() => controller.abort(), 5000)
+
+      await fetch(`${API_BASE_URL}/health`, {
+        method: 'HEAD',
+        signal: controller.signal
+      })
+
+      clearTimeout(timeoutId)
+      return true
+    } catch (e) {
+      return false
+    }
+  },
+
+  // Get liked thoughts - REQUIRES authentication
+  getLikedThoughts: async () => {
+    try {
+      const token = localStorage.getItem('token')
+      if (!token) {
+        throw new Error('Authentication required')
+      }
+
+      const response = await fetchWithRetry(`${API_BASE_URL}/thoughts/liked`, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`
+        }
+      })
+
+      if (!response.ok) {
+        throw new Error(`Failed to fetch liked thoughts: ${response.status}`)
+      }
+
+      return await response.json()
+    } catch (error) {
+      console.error('Error fetching liked thoughts:', error)
       throw error
     }
   }

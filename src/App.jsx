@@ -1,19 +1,24 @@
 import React, { useState, useEffect } from 'react'
-
-import { LikeCounter } from './components/LikeCounter'
-import { Loader } from './components/Loader'
-import { LoginSignup } from './components/LoginSignup'
-import { LogoutButton } from './components/LogoutButton'
-import Pagination from './components/Pagination'
-import { Thought } from './components/Thought'
-import { ThoughtForm } from './components/ThoughtForm'
 import { GlobalStyles } from './GlobalStyles'
-import { useThoughts } from './hooks/useThoughts'
+import { ThoughtForm } from './components/ThoughtForm'
+import { Thought } from './components/Thought'
+import { LikeCounter } from './components/LikeCounter'
+import { Pagination } from './components/Pagination'
+import { LoginSignup } from './components/LoginSignup'
+import { NavBar } from './components/NavBar'
+import { useThoughts } from './contexts/ThoughtsContext'
+import { Loader } from './components/Loader'
+import { UpdateModal } from './components/UpdateModal'
+import { BrowserRouter as Router, Routes, Route } from 'react-router-dom'
+import { UserThoughts } from './components/UserThoughts'
+import { LikedThoughts } from './components/LikedThoughts'
 
 export const App = () => {
   const [token, setToken] = useState(localStorage.getItem('token'))
-  const [user, setUser] = useState(null)
   const [showLogin, setShowLogin] = useState(false)
+  const [user, setUser] = useState(null)
+  const [isUpdateModalOpen, setIsUpdateModalOpen] = useState(false)
+  const [updatingThought, setUpdatingThought] = useState(null)
 
   const {
     thoughts,
@@ -22,12 +27,29 @@ export const App = () => {
     currentPage,
     totalPages,
     newThoughtId,
-    serverStarting,
-    setCurrentPage,
     createThought,
-    handleDeleteThought,
-    handleUpdateThought
+    deleteThought,
+    updateThought,
+    setCurrentPage
   } = useThoughts()
+
+  // Opens the update modal when a thought is selected for editing
+  const handleOpenUpdateModal = (thought) => {
+    setUpdatingThought(thought)
+    setIsUpdateModalOpen(true)
+  }
+
+  // Saves the updated thought when modal form is submitted
+  const handleSaveThoughtUpdate = async (id, updatedMessage) => {
+    try {
+      await updateThought(id, updatedMessage)
+      setIsUpdateModalOpen(false)
+      setUpdatingThought(null)
+    } catch (error) {
+      console.error('Failed to update thought:', error)
+      alert('Failed to update your thought. Please try again.')
+    }
+  }
 
   // Extract user info from token on mount or when token changes
   useEffect(() => {
@@ -61,7 +83,7 @@ export const App = () => {
   const handleLogout = () => {
     localStorage.removeItem('token')
     setToken(null)
-    setShowLogin(false) // Hide login form after logout
+    setUser(null)
   }
 
   // Show loader while loading
@@ -96,116 +118,85 @@ export const App = () => {
 
   // Always show main app (no login gate!)
   return (
-    <div className='App'>
-      <GlobalStyles />
+    <Router>
+      <div className='App'>
+        <GlobalStyles />
 
-      {/* Header with auth controls */}
-      <div
-        style={{
-          display: 'flex',
-          justifyContent: 'space-between',
-          alignItems: 'center',
-          padding: '10px 20px',
-          borderBottom: '1px solid #eee',
-          marginBottom: '20px'
-        }}
-      >
-        <h1 style={{ margin: 0, fontSize: '24px' }}>Happy Thoughts</h1>
-
-        <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
-          {token ? (
-            <>
-              <span style={{ fontSize: '14px', color: '#666' }}>
-                Welcome back!
-              </span>
-              <LogoutButton onLogout={handleLogout} />
-            </>
-          ) : (
-            <button
-              onClick={() => setShowLogin(!showLogin)}
-              style={{
-                padding: '8px 16px',
-                background: 'transparent',
-                border: '1px solid #ccc',
-                borderRadius: '4px',
-                cursor: 'pointer'
-              }}
-            >
-              {showLogin ? 'Hide Login' : 'Login / Sign Up'}
-            </button>
-          )}
-        </div>
-      </div>
-
-      {/* Show login form if requested and not logged in */}
-      {showLogin && !token && (
-        <div style={{ marginBottom: '30px' }}>
-          <LoginSignup
-            setToken={(newToken) => {
-              setToken(newToken)
-              setShowLogin(false) // Hide login after successful login
-            }}
-          />
-        </div>
-      )}
-
-      {/* Main app content - always visible */}
-      <ThoughtForm onSubmit={createThought} />
-      <LikeCounter />
-
-      {thoughts.map((thought) => {
-        // Debug log to see thought structure
-        console.log('Thought data:', {
-          id: thought._id,
-          message: thought.message?.substring(0, 20),
-          user: thought.user,
-          userId: thought.userId,
-          isAnonymous: thought.isAnonymous,
-          currentId: currentUserId
-        })
-
-        return (
-          <Thought
-            key={thought._id}
-            _id={thought._id}
-            message={thought.message}
-            hearts={thought.hearts}
-            createdAt={thought.createdAt}
-            tags={thought.tags || []}
-            user={thought.user} // Pass the user ID from thought
-            isAnonymous={thought.isAnonymous || !thought.user}
-            isNew={thought._id === newThoughtId}
-            onDelete={handleDeleteThought}
-            onUpdate={handleUpdateThought}
-            currentUserId={currentUserId} // Pass current user ID from token
-          />
-        )
-      })}
-
-      {totalPages > 1 && (
-        <Pagination
-          currentPage={currentPage}
-          totalPages={totalPages}
-          onPageChange={(newPage) => {
-            console.log('Changing to page:', newPage)
-            setCurrentPage(newPage)
-          }}
+        <NavBar
+          token={token}
+          showLogin={showLogin}
+          setShowLogin={setShowLogin}
+          handleLogout={handleLogout}
         />
-      )}
 
-      {serverStarting && (
-        <div
-          style={{
-            textAlign: 'center',
-            padding: '20px',
-            backgroundColor: '#f0f0f0',
-            margin: '20px',
-            borderRadius: '8px'
-          }}
-        >
-          Our server is waking up... This may take 30-60 seconds.
-        </div>
-      )}
-    </div>
+        {/* Show login form if requested and not logged in */}
+        {showLogin && !token && (
+          <div style={{ marginBottom: '30px' }}>
+            <LoginSignup
+              setToken={(newToken) => {
+                setToken(newToken)
+                setShowLogin(false) // Hide login after successful login
+              }}
+            />
+          </div>
+        )}
+
+        <ThoughtForm onSubmit={createThought} />
+        <LikeCounter />
+
+        <Routes>
+          <Route
+            path='/'
+            element={thoughts.map((thought) => (
+              <Thought
+                key={thought._id}
+                _id={thought._id}
+                message={thought.message}
+                hearts={thought.hearts}
+                createdAt={thought.createdAt}
+                tags={thought.tags}
+                userId={thought.userId || thought.user?._id || thought.user}
+                username={thought.username}
+                onDelete={deleteThought}
+                onUpdate={handleOpenUpdateModal}
+              />
+            ))}
+          />
+          <Route path='/liked-thoughts' element={<LikedThoughts />} />
+          {/* Add other routes here as needed */}
+        </Routes>
+
+        <UpdateModal
+          isOpen={isUpdateModalOpen}
+          onClose={() => setIsUpdateModalOpen(false)}
+          initialMessage={updatingThought?.message || ''}
+          onSave={(message) =>
+            handleSaveThoughtUpdate(updatingThought?._id, message)
+          }
+        />
+
+        {totalPages > 1 && (
+          <Pagination
+            currentPage={currentPage}
+            totalPages={totalPages}
+            onPageChange={setCurrentPage}
+          />
+        )}
+
+        {serverStarting && (
+          <div
+            style={{
+              textAlign: 'center',
+              padding: '20px',
+              backgroundColor: '#f0f0f0',
+              margin: '20px',
+              borderRadius: '8px'
+            }}
+          >
+            Our server is waking up... This may take 30-60 seconds.
+          </div>
+        )}
+      </div>
+    </Router>
   )
 }

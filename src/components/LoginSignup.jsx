@@ -73,6 +73,18 @@ const Login = ({ setToken }) => {
 
       if (result.success && result.token) {
         localStorage.setItem('token', result.token)
+
+        // Store full user object if available
+        if (result.user) {
+          localStorage.setItem('user', JSON.stringify(result.user))
+        } else {
+          // Fallback to just username
+          localStorage.setItem(
+            'userInfo',
+            JSON.stringify({ username: username })
+          )
+        }
+
         setToken(result.token)
       } else {
         setError('Login failed')

@@ -64,8 +64,21 @@ export const StyledButton = styled.button`
       background-color: var(--color-tertiary);
     }
   `}
-`
 
+  ${(props) =>
+    (props.$variant === 'login' || !props.$variant) &&
+    `
+    min-width: 20px;
+    padding: 10px 20px;
+    background-color: transparent;
+    border: solid 1px black;
+    
+    &:hover {
+      background-color: var(--color-secondary);
+    }
+
+`}
+`
 export const Button = ({
   text,
   icon,

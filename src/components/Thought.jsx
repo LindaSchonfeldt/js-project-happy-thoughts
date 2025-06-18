@@ -1,3 +1,4 @@
+import React, { useState } from 'react'
 import styled, { keyframes } from 'styled-components'
 
 import { useLikeSystem } from '../hooks/useLikeSystem'
@@ -17,7 +18,7 @@ const fadeIn = keyframes`
   }
 `
 
-export const ThoughtContainer = styled.div`
+const ThoughtContainer = styled.div`
   display: flex;
   flex-direction: column;
   align-items: flex-start;
@@ -58,7 +59,7 @@ const Tag = styled.span`
     color: #999;
   }
 `
-const Tags = styled.div`
+const TagsSection = styled.div`
   display: flex;
   flex-direction: row;
   align-items: center;
@@ -68,7 +69,7 @@ const Tags = styled.div`
   flex-wrap: wrap; /* Allow tags to wrap to next line */
 `
 
-const ThoughtText = styled.p`
+const MessageSection = styled.p`
   width: 100%;
   height: auto;
   padding: 16px 4px 16px 4px;
@@ -80,31 +81,29 @@ const TopSection = styled.div`
   justify-content: space-between;
   width: 100%;
 `
-const BottomSection = styled.div`
-  display: flex;
-  flex-direction: row;
-  align-items: flex-end;
-  justify-content: space-between;
-  width: 100%;
-`
 
-const LikeCounter = styled.div`
+const ActionRow = styled.div`
   display: flex;
   flex-direction: row;
   align-items: center;
-  justify-content: flex-end;
-  gap: 4px;
-  color: #333;
-  font-size: 12px;
-`
-const EditButton = styled.div`
-  display: flex;
-  flex-direction: row;
-  align-items: flex-start;
+  justify-content: flex-start;
   gap: 8px;
+  width: 100%;
 `
 
-export const DateText = styled.span`
+const BottomSection = styled.div`
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 12px;
+`
+
+const LikeCounterStyled = styled.div`
+  display: flex;
+  align-items: center;
+`
+
+export const TimeStamp = styled.span`
   display: flex;
   flex-direction: row;
   justify-content: flex-start;
@@ -120,49 +119,49 @@ export const Thought = ({
   hearts: initialHearts,
   createdAt,
   tags,
-  user = null, // ← Use this name to match the data structure
+  userId, // This is the thought creator's ID
+  username,
   isAnonymous = true,
   onDelete,
   onUpdate,
   currentUserId
 }) => {
   const { isLiked, likeCount, handleLike } = useLikeSystem(_id, initialHearts)
-  const { canUpdate, canDelete } = useThoughtAuthorization(currentUserId)
+  const { canUpdateThought } = useThoughtAuthorization()
 
-  // Fix this line that causes the error - use the prop directly
-  const thoughtPermissions = {
-    canUpdate: canUpdate({
-      user: user || null,
-      isAnonymous: isAnonymous || true
-    }),
-    canDelete: canDelete({
-      user: user || null,
-      isAnonymous: isAnonymous || true
-    })
+  // Reconstruct thought object for authorization check
+  const thought = {
+    _id,
+    message,
+    hearts: initialHearts,
+    createdAt,
+    tags,
+    userId, // important for authorization check
+    username
   }
 
-  // For edit/update functionality
-  const handleUpdateThought = () => {
-    if (!thoughtPermissions.canUpdate) {
-      alert('You can only edit your own thoughts')
-      return
+  // Handle update action
+  const handleUpdate = () => {
+    if (onUpdate) {
+      onUpdate(thought)
     }
-
-    // Your edit implementation
-    onUpdate(_id, 'New message')
   }
 
-  // For delete functionality
-  const handleDeleteThought = () => {
-    if (!thoughtPermissions.canDelete) {
-      alert('You can only delete your own thoughts')
-      return
-    }
-
-    if (window.confirm('Are you sure you want to delete this thought?')) {
+  // Handle delete action
+  const handleDelete = () => {
+    if (onDelete) {
       onDelete(_id)
     }
   }
+
+  // Determine if user can edit/delete this thought
+  const userCanUpdateThought = canUpdateThought
+    ? canUpdateThought(thought)
+    : false
+
+  // Set flags for showing edit/delete buttons
+  const showEditButton = userCanUpdateThought
+  const showDeleteButton = userCanUpdateThought
 
   const formattedDate = formatDate(createdAt)
 
@@ -177,43 +176,42 @@ export const Thought = ({
   return (
     <ThoughtContainer $isNew={isNew}>
       <TopSection>
-        <Tags>
+        <TagsSection>
           {tags &&
             tags.length > 0 &&
             tags.map((tag, index) => <Tag key={index}>{tag}</Tag>)}
-        </Tags>
+        </TagsSection>
         {/* Only show edit button if user owns the thought */}
-        {thoughtPermissions.canUpdate && (
-          <Button variant='authed' text='Edit' onClick={handleUpdateThought} />
+        {showEditButton && (
+          <Button variant='authed' text='Edit' onClick={handleUpdate} />
         )}
       </TopSection>
 
-      <ThoughtText>{displayMessage}</ThoughtText>
+      <MessageSection>{displayMessage}</MessageSection>
 
       <BottomSection>
-        <EditButton>
+        <ActionRow>
           {/* Only show delete button if user owns the thought */}
-          {thoughtPermissions.canDelete && (
+          {showDeleteButton && (
             <Button
               variant='authed'
               text='Delete'
-              onClick={handleDeleteThought}
+              onClick={handleDelete}
             />
           )}
-        </EditButton>
-
-        <LikeCounter>
-          <p>{`${displayLikeCount} x`}</p>
-          <Button
-            variant='icon'
-            icon={'❤️'}
-            onClick={handleLike}
-            isLiked={isLiked}
-          />
-        </LikeCounter>
+          <LikeCounterStyled>
+            <p>{`${displayLikeCount} x`}</p>
+            <Button
+              variant='icon'
+              icon={'❤️'}
+              onClick={handleLike}
+              $isLiked={isLiked}
+            />
+          </LikeCounterStyled>
+        </ActionRow>
       </BottomSection>
 
-      <DateText>{formattedDate}</DateText>
+      <TimeStamp>{formattedDate}</TimeStamp>
     </ThoughtContainer>
   )
 }
