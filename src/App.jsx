@@ -33,7 +33,7 @@ export const App = () => {
     deleteThought,
     updateThought,
     fetchThoughts,
-    setCurrentPage
+    setPage
   } = useThoughts()
 
   // Opens the update modal when a thought is selected for editing
@@ -218,7 +218,7 @@ export const App = () => {
           <Pagination
             currentPage={currentPage}
             totalPages={totalPages}
-            onPageChange={setCurrentPage}
+            onPageChange={setPage}
           />
         )}
 
