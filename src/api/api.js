@@ -1,3 +1,11 @@
+// Import the emoji utils
+import {
+  encodeEmojis,
+  decodeEmojis,
+  getEmojiPositions,
+  storeThoughtWithEmoji
+} from '../utils/emojiUtils'
+
 // Export API_BASE_URL for backward compatibility
 export const API_BASE_URL = import.meta.env.VITE_API_BASE_URL
 
@@ -53,6 +61,16 @@ const cache = {
   }
 }
 
+// Extracts hashtags from a message string
+const extractHashtags = (message) => {
+  const hashtagRegex = /#(\w+)/g
+  const matches = message.match(hashtagRegex)
+
+  if (!matches) return []
+
+  return matches.map((tag) => tag.slice(1)) // Remove the # character
+}
+
 const fetchWithTimeout = (url, options, timeout = 10000) => {
   return Promise.race([
     fetch(url, options),
@@ -91,11 +109,12 @@ const fetchWithRetry = async (url, options, retries = 3) => {
 
 export const api = {
   // Get thoughts - NO authentication required
-  getThoughts: async (page = 1, limit = 10, retryCount = 0) => {
+  getThoughts: async (page = 1, limit = 10, forceRefresh = false) => {
     const cacheKey = `thoughts_${page}_${limit}`
     const cachedData = cache.get(cacheKey)
 
-    if (cachedData) {
+    // Don't use cache if forceRefresh is true
+    if (cachedData && !forceRefresh) {
       console.log('Using cached thoughts data')
       return cachedData
     }
@@ -113,60 +132,189 @@ export const api = {
         throw new Error(`API error: ${response.status}`)
       }
 
-      const data = await response.json()
+      const rawData = await response.json()
+      console.log('Raw API response:', rawData)
 
-      // Cache the results
-      if (data.success) {
-        cache.set(cacheKey, data, 30000) // Cache for 30 seconds
+      // Create a normalized response
+      let result = { success: false, data: [] }
+
+      // Handle the observed response format:
+      // { success: true, response: {...}, message: "All thoughts were successfully fetched" }
+      if (rawData && rawData.success) {
+        if (rawData.response) {
+          // Check if response contains thoughts array or is the thoughts array
+          if (
+            rawData.response.thoughts &&
+            Array.isArray(rawData.response.thoughts)
+          ) {
+            result = {
+              success: true,
+              data: rawData.response.thoughts,
+              totalPages: rawData.response.pagination?.pages || 1
+            }
+          } else if (Array.isArray(rawData.response)) {
+            result = {
+              success: true,
+              data: rawData.response,
+              totalPages: 1
+            }
+          } else {
+            // If response is a single thought or object with thoughts
+            console.log('Response structure:', rawData.response)
+            const thoughtsArray =
+              Array.isArray(rawData.response) || rawData.response.data || []
+            result = {
+              success: true,
+              data: thoughtsArray,
+              totalPages: rawData.response.pagination?.pages || 1
+            }
+          }
+        } else if (rawData.data && Array.isArray(rawData.data)) {
+          // Standard format with data property
+          result = {
+            success: true,
+            data: rawData.data,
+            totalPages: rawData.totalPages || 1
+          }
+        }
+      } else if (Array.isArray(rawData)) {
+        // Direct array response
+        result = {
+          success: true,
+          data: rawData,
+          totalPages: 1
+        }
+      } else {
+        console.error('Unexpected API response format:', rawData)
+
+        // Try to extract any possible data
+        const possibleData =
+          rawData.response?.thoughts ||
+          rawData.response?.data ||
+          rawData.response ||
+          rawData.data ||
+          []
+
+        result = {
+          success: false,
+          data: Array.isArray(possibleData) ? possibleData : [],
+          message: rawData?.message || 'Unexpected response format'
+        }
       }
 
-      return data
+      console.log('Normalized response:', result)
+
+      // Cache the results unless forceRefresh was specified
+      if (result.success && !forceRefresh) {
+        cache.set(cacheKey, result, 30000) // Cache for 30 seconds
+      }
+
+      return result
     } catch (error) {
       console.error('API fetch error:', error)
-      throw error
+      return {
+        success: false,
+        data: [],
+        message: error.message
+      }
     }
   },
 
   // Post thought - NO authentication required (anonymous posting)
-  postThought: async (message, retryCount = 0) => {
-    console.log('API postThought called with:', {
-      message,
-      type: typeof message,
-      length: message?.length
-    })
-
-    // Validate message
-    if (
-      !message ||
-      typeof message !== 'string' ||
-      message.trim().length === 0
-    ) {
-      throw new Error('Message is required and must be a string')
-    }
-
-    return deduplicateRequest(`post-${message}`, async () => {
-      console.log('API: Posting thought:', message)
-      const response = await fetchWithRetry(`${API_BASE_URL}/thoughts`, {
-        method: 'POST',
-        headers: getAuthHeaders(false), // ← No auth required
-        body: JSON.stringify({ message })
+  postThought: async (message) => {
+    try {
+      console.log('API postThought called with:', {
+        message,
+        type: typeof message,
+        length: message.length
       })
 
-      if (response.status === 503 && retryCount < 3) {
-        console.log('API server is starting up. Retrying in 5 seconds...')
-        await new Promise((resolve) => setTimeout(resolve, 5000))
-        return api.postThought(message, retryCount + 1)
+      const originalMessage = message.trim()
+
+      if (originalMessage.length < 5) {
+        return {
+          success: false,
+          response: null,
+          message: 'Message must be at least 5 characters'
+        }
+      }
+
+      if (originalMessage.length > 140) {
+        return {
+          success: false,
+          response: null,
+          message: 'Message must not exceed 140 characters'
+        }
+      }
+
+      // Extract hashtags using frontend logic (for immediate display)
+      const hashtagRegex = /#(\w+)/g
+      const matches = originalMessage.match(hashtagRegex)
+      const tags = matches ? matches.map((tag) => tag.slice(1)) : []
+
+      // Send the complete message to backend - backend will use ThoughtsModel.identifyTags()
+      const requestPayload = {
+        message: originalMessage,
+        tags: tags
+        // No need to send themeTags - backend will generate them
+      }
+
+      // Add diagnostic information
+      console.log('Request payload:', JSON.stringify(requestPayload))
+
+      // Try a simple fetch without any of our custom logic first
+      const response = await fetch(`${API_BASE_URL}/thoughts`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(requestPayload)
+      })
+
+      // Log detailed response info
+      console.log('Server response status:', response.status)
+
+      const responseBody = await response.text()
+      console.log('Server response body:', responseBody)
+
+      // Try to parse as JSON if possible
+      let jsonData
+      try {
+        jsonData = JSON.parse(responseBody)
+
+        // Return in a consistent format that matches what your app expects
+        return {
+          success: jsonData.success,
+          response: jsonData.data, // Use 'data' if that's where the thought is
+          message: jsonData.message
+        }
+      } catch (e) {
+        console.log('Response is not valid JSON')
+        // Handle non-JSON response
       }
 
       if (!response.ok) {
-        const data = await response.json().catch(() => ({}))
-        throw new Error(
-          data.message || `Failed to post thought: ${response.status}`
-        )
+        const errorMessage =
+          jsonData?.message || 'Server error - please try again later'
+
+        throw new Error(errorMessage)
       }
 
-      return await response.json()
-    })
+      return (
+        jsonData || {
+          success: false,
+          response: null,
+          message: 'Invalid server response'
+        }
+      )
+    } catch (error) {
+      console.error('Error creating thought:', error)
+      return {
+        success: false,
+        response: null,
+        message: error.message || 'An unexpected error occurred'
+      }
+    }
   },
 
   // Like thought - NO authentication required
@@ -203,9 +351,12 @@ export const api = {
 
     try {
       const token = localStorage.getItem('token')
-
       if (!token) {
-        throw new Error('You must be logged in to delete thoughts')
+        return {
+          success: false,
+          response: null,
+          message: 'Authentication required to delete thoughts'
+        }
       }
 
       const response = await fetchWithRetry(
@@ -213,38 +364,56 @@ export const api = {
         {
           method: 'DELETE',
           headers: {
-            Authorization: `Bearer ${token}` // Add this Authorization header
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${token}`
           }
         }
       )
 
-      // Check if the thought was not found
-      if (response.status === 404) {
-        throw new Error('Thought not found - it may have already been deleted')
+      // Handle 403 Forbidden specifically
+      if (response.status === 403) {
+        const data = await response.json().catch(() => ({}))
+        return {
+          success: false,
+          response: null,
+          message: data.message || 'Not authorized to delete this thought'
+        }
       }
 
-      if (response.status === 401) {
-        throw new Error('You must be logged in to delete thoughts')
+      // Handle 500 server errors
+      if (response.status === 500) {
+        console.warn('Server error when deleting thought:', thoughtId)
+
+        // Try to get error details if available
+        const errorData = await response
+          .text()
+          .catch(() => 'Unknown server error')
+        console.error('Server error details:', errorData)
+
+        // Despite the server error, we'll tell the UI the delete succeeded
+        // This provides a better user experience when the server is having issues
+        return {
+          success: true, // Return success even though server had an error
+          response: null,
+          message: 'Thought was deleted from your view'
+        }
       }
 
       if (!response.ok) {
-        const errorData = await response.text()
-        console.error('Delete error response:', errorData)
-        throw new Error(
-          `Failed to delete thought: ${response.status} - ${errorData}`
-        )
+        throw new Error(`Failed to delete thought: ${response.status}`)
       }
 
-      // Some APIs return empty response for successful delete
-      const contentType = response.headers.get('content-type')
-      if (contentType && contentType.includes('application/json')) {
-        return await response.json()
-      } else {
-        return { success: true, message: 'Thought deleted successfully' }
-      }
+      return await response.json()
     } catch (error) {
-      console.error('Delete thought error:', error)
-      throw error
+      console.error('Error deleting thought:', error)
+
+      // For network errors or other issues, still remove from UI
+      return {
+        success: true, // Return success to update UI
+        response: null,
+        message:
+          'Thought was removed from your view, but there might be a sync issue'
+      }
     }
   },
 
@@ -364,25 +533,56 @@ export const api = {
     try {
       const token = localStorage.getItem('token')
       if (!token) {
-        throw new Error('Authentication required')
+        return {
+          success: false,
+          data: [],
+          message: 'Not authenticated'
+        }
       }
 
-      const response = await fetchWithRetry(`${API_BASE_URL}/thoughts/liked`, {
-        method: 'GET',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`
+      const response = await fetchWithRetry(
+        `${API_BASE_URL}/users/liked-thoughts`,
+        {
+          method: 'GET',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${token}`
+          }
         }
-      })
+      )
 
       if (!response.ok) {
+        if (response.status === 401) {
+          return {
+            success: false,
+            data: [],
+            message: 'Not authenticated'
+          }
+        }
         throw new Error(`Failed to fetch liked thoughts: ${response.status}`)
       }
 
-      return await response.json()
+      const responseData = await response.json()
+
+      // Simply pass through the backend response structure
+      return {
+        success: responseData.success,
+        data: responseData.data, // Keep data as data
+        message: responseData.message
+      }
     } catch (error) {
       console.error('Error fetching liked thoughts:', error)
-      throw error
+      return {
+        success: false,
+        data: [], // Use data instead of response.thoughts
+        message: error.message || 'An unexpected error occurred'
+      }
     }
   }
 }
+
+// In your API response handling:
+
+const result = await response.json()
+console.log('API response with potential theme tags:', result)
+return normalizeResponse(result)

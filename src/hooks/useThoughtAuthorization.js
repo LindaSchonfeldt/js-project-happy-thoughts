@@ -1,49 +1,36 @@
 import { jwtDecode } from 'jwt-decode'
 
 export const useThoughtAuthorization = () => {
+  const getToken = () => localStorage.getItem('token')
+
   const getCurrentUserId = () => {
+    const token = getToken()
+    if (!token) return null
+
     try {
-      const token = localStorage.getItem('token')
-      if (!token) return null
-
-      // Don't try to parse as JSON, decode directly
       const decoded = jwtDecode(token)
-      console.log('Auth token decoded:', decoded)
-
-      // Return userId from the decoded token
       return decoded.userId
     } catch (error) {
-      console.error('Error getting current user ID:', error)
+      console.error('Error decoding token:', error)
       return null
     }
   }
 
   const canUpdateThought = (thought) => {
+    if (!thought) return false
+
+    const thoughtUserId = thought.userId
     const currentUserId = getCurrentUserId()
 
-    // Debug the thought structure
-    console.log('Complete thought object:', thought)
-
-    // Check all possible locations of the user ID
-    const thoughtUser =
-      thought?.userId ||
-      thought?.user?._id ||
-      thought?.user ||
-      thought?.author ||
-      thought?.authorId
-
-    const isMatch =
-      !!currentUserId && !!thoughtUser && currentUserId === thoughtUser
-
-    console.log('Can update check: ', {
-      thoughtUser,
-      currentUserId,
-      isMatch,
-      thoughtObj: thought
-    })
-
-    return isMatch
+    return Boolean(
+      thoughtUserId && currentUserId && thoughtUserId === currentUserId
+    )
   }
 
-  return { canUpdateThought, getCurrentUserId }
+  return {
+    canUpdateThought,
+    getCurrentUserId
+  }
 }
+
+export default useThoughtAuthorization

@@ -10,8 +10,9 @@ import { useThoughts } from './contexts/ThoughtsContext'
 import { Loader } from './components/Loader'
 import { UpdateModal } from './components/UpdateModal'
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom'
-import { UserThoughts } from './components/UserThoughts'
 import { LikedThoughts } from './components/LikedThoughts'
+import { ServiceStatus } from './components/ServiceStatus'
+import { UserThoughts } from './components/UserThoughts'
 
 export const App = () => {
   const [token, setToken] = useState(localStorage.getItem('token'))
@@ -19,6 +20,7 @@ export const App = () => {
   const [user, setUser] = useState(null)
   const [isUpdateModalOpen, setIsUpdateModalOpen] = useState(false)
   const [updatingThought, setUpdatingThought] = useState(null)
+  const [serverStarting, setServerStarting] = useState(false)
 
   const {
     thoughts,
@@ -35,8 +37,14 @@ export const App = () => {
 
   // Opens the update modal when a thought is selected for editing
   const handleOpenUpdateModal = (thought) => {
-    setUpdatingThought(thought)
-    setIsUpdateModalOpen(true)
+    // Check if thought exists and has required properties
+    if (thought && thought._id) {
+      console.log('Opening update modal for thought:', thought)
+      setUpdatingThought(thought)
+      setIsUpdateModalOpen(true)
+    } else {
+      console.error('Cannot update thought: Invalid thought object', thought)
+    }
   }
 
   // Saves the updated thought when modal form is submitted
@@ -86,6 +94,33 @@ export const App = () => {
     setUser(null)
   }
 
+  // Check server status on mount
+  useEffect(() => {
+    const checkServerStatus = async () => {
+      try {
+        setServerStarting(true)
+        const response = await fetch(
+          'https://happy-thoughts-api-yn3p.onrender.com/health'
+        )
+        if (response.ok) {
+          setServerStarting(false)
+        }
+      } catch (error) {
+        console.log('Server may be starting up:', error)
+        setServerStarting(true)
+      }
+    }
+
+    checkServerStatus()
+
+    // Check again after 10 seconds
+    const timer = setTimeout(() => {
+      setServerStarting(false)
+    }, 10000)
+
+    return () => clearTimeout(timer)
+  }, [])
+
   // Show loader while loading
   if (loading) {
     return (
@@ -118,7 +153,7 @@ export const App = () => {
 
   // Always show main app (no login gate!)
   return (
-    <Router>
+    <Router basename='/'>
       <div className='App'>
         <GlobalStyles />
 
@@ -142,7 +177,13 @@ export const App = () => {
         )}
 
         <ThoughtForm onSubmit={createThought} />
-        <LikeCounter />
+        <ServiceStatus
+          error={error}
+          isLoading={loading && !serverStarting}
+          onRetry={() => {
+            fetchThoughts && fetchThoughts(currentPage)
+          }}
+        />
 
         <Routes>
           <Route
@@ -157,13 +198,16 @@ export const App = () => {
                 tags={thought.tags}
                 userId={thought.userId || thought.user?._id || thought.user}
                 username={thought.username}
+                isNew={thought._id === newThoughtId} // This is crucial for animation
                 onDelete={deleteThought}
                 onUpdate={handleOpenUpdateModal}
               />
             ))}
           />
           <Route path='/liked-thoughts' element={<LikedThoughts />} />
-          {/* Add other routes here as needed */}
+          <Route path='/user-thoughts' element={<UserThoughts />} />
+          <Route path='*' element={<div>Page not found</div>} />{' '}
+          {/* Add catch-all route */}
         </Routes>
 
         <UpdateModal

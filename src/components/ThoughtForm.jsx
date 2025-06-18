@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { Button } from './Button'
 import styled from 'styled-components'
 import { media } from '../media'
+import { sanitizeInput } from '../utils/inputUtils.js'
 
 export const StyledThoughtForm = styled.div`
   display: flex;
@@ -93,54 +94,57 @@ const StyledError = styled.div`
 
 export const ThoughtForm = ({ onSubmit }) => {
   const [message, setMessage] = useState('')
+  const [charCount, setCharCount] = useState(0) // Add this line if missing
   const [error, setError] = useState('')
   const [isSubmitting, setIsSubmitting] = useState(false)
 
-  const handleSubmit = async (e) => {
-    e.preventDefault()
+  sanitizeInput(message) // Sanitize input to prevent XSS attacks
 
-    // Clear any previous errors
+  const handleSubmit = async (event) => {
+    event.preventDefault()
+
+    if (isSubmitting) return
+
+    setIsSubmitting(true)
     setError('')
 
-    // Get the message from the state or form
-    const messageToSubmit = message.trim()
-
-    // Validate the message
-    if (!messageToSubmit || messageToSubmit.length === 0) {
-      setError('Please enter a message')
+    if (message.trim().length < 5) {
+      setError('Your thought needs to be at least 5 characters long')
+      setIsSubmitting(false)
       return
     }
 
-    if (messageToSubmit.length < 5) {
-      setError('Message must be at least 5 characters')
-      return
-    }
-
-    if (messageToSubmit.length > 140) {
-      setError('Message must be 140 characters or less')
+    if (message.trim().length > 140) {
+      setError('Your thought cannot exceed 140 characters')
+      setIsSubmitting(false)
       return
     }
 
     try {
-      setIsSubmitting(true)
+      console.log('Submitting form with message:', message)
+      const result = await onSubmit(message)
 
-      // Call the onSubmit prop with the message string
-      await onSubmit(messageToSubmit)
+      console.log('Form submission result:', result)
 
-      // Clear the form on success
-      setMessage('')
+      if (result && result.success) {
+        setMessage('')
+        setCharCount(0) // This line was causing the error
+        setError('')
+      } else {
+        setError(result?.message || 'Failed to post your thought')
+      }
     } catch (err) {
-      setError('Failed to post thought. Please try again.')
       console.error('Form submission error:', err)
+      setError(err.message || 'Something went wrong. Please try again.')
     } finally {
       setIsSubmitting(false)
     }
   }
 
-  const handleInputChange = (e) => {
-    setMessage(e.target.value)
-    // Clear error when user starts typing
-    if (error) setError('')
+  const handleMessage = (e) => {
+    const inputValue = e.target.value
+    setMessage(inputValue)
+    setCharCount(inputValue.length)
   }
 
   return (
@@ -151,7 +155,7 @@ export const ThoughtForm = ({ onSubmit }) => {
           type='text'
           placeholder='Type your happy thought here...'
           value={message}
-          onChange={handleInputChange}
+          onChange={handleMessage}
           disabled={isSubmitting}
         />
         <StyledFooter>

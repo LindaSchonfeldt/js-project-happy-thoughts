@@ -1,7 +1,9 @@
+import React, { useEffect } from 'react'
 import { useThoughts } from '../contexts/ThoughtsContext'
 import { Thought } from './Thought'
 import styled from 'styled-components'
 import { useNavigate } from 'react-router-dom'
+import { Loader } from './Loader'
 
 const LikedThoughtsContainer = styled.div`
   max-width: 800px;
@@ -27,14 +29,54 @@ const Header = styled.h1`
   margin-bottom: 20px;
 `
 
-export const LikedThoughts = () => {
-  const { likedThoughts, loading, error, deleteThought, updateThought } = useThoughts();
-  const navigate = useNavigate();
+const EmptyState = styled.p`
+  text-align: center;
+  color: #888;
+`
 
-  // Add a handler if you need to open a modal
+export const LikedThoughts = () => {
+  const {
+    thoughts,
+    likedThoughts,
+    loading,
+    error,
+    fetchLikedThoughts,
+    deleteThought,
+    updateThought
+  } = useThoughts()
+  const navigate = useNavigate()
+
+  useEffect(() => {
+    // Fetch liked thoughts when component mounts
+    fetchLikedThoughts()
+  }, [fetchLikedThoughts])
+
+  // Fallback to localStorage if API fails
+  const getFallbackLikedThoughts = () => {
+    try {
+      // Get liked post IDs from localStorage
+      const likedIds = JSON.parse(localStorage.getItem('likedPosts') || '[]')
+
+      // Filter all thoughts to show only liked ones
+      return thoughts.filter((thought) => likedIds.includes(thought._id))
+    } catch (e) {
+      console.error('Error getting fallback liked thoughts:', e)
+      return []
+    }
+  }
+
+  // Use API results if available, otherwise use fallback
+  const thoughtsToDisplay =
+    likedThoughts.length > 0 ? likedThoughts : getFallbackLikedThoughts()
+
+  // Handler for opening update modal
   const handleOpenUpdateModal = (thought) => {
-    // Modal opening logic here
-  };
+    // Implementation for opening update modal
+  }
+
+  if (loading) {
+    return <Loader message='Loading your liked thoughts...' />
+  }
 
   return (
     <LikedThoughtsContainer>
@@ -43,15 +85,13 @@ export const LikedThoughts = () => {
       </BackButton>
       <Header>Thoughts You've Liked</Header>
 
-      {loading ? (
-        <p>Loading your liked thoughts...</p>
-      ) : error ? (
-        <p>Error loading thoughts: {error}</p>
-      ) : likedThoughts.length === 0 ? (
-        <p>You haven't liked any thoughts yet.</p>
+      {error ? (
+        <EmptyState>Error loading thoughts: {error}</EmptyState>
+      ) : thoughtsToDisplay.length === 0 ? (
+        <EmptyState>You haven't liked any thoughts yet.</EmptyState>
       ) : (
-        likedThoughts.map((thought) => (
-          <Thought 
+        thoughtsToDisplay.map((thought) => (
+          <Thought
             key={thought._id}
             _id={thought._id}
             message={thought.message}
@@ -66,5 +106,5 @@ export const LikedThoughts = () => {
         ))
       )}
     </LikedThoughtsContainer>
-  );
-};
+  )
+}

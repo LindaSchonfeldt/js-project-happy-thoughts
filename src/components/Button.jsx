@@ -65,6 +65,18 @@ export const StyledButton = styled.button`
     }
   `}
 
+      ${(props) =>
+    (props.$variant === 'danger' || !props.$variant) &&
+    `
+    min-width: 20px;
+    background-color: var(--color-secondary);    
+    border: solid 1px black;
+    
+    &:hover {
+      background-color: var(--color-tertiary);
+    }
+  `}
+
   ${(props) =>
     (props.$variant === 'login' || !props.$variant) &&
     `

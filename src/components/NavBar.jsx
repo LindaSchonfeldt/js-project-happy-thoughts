@@ -1,6 +1,5 @@
-import React from 'react'
 import styled from 'styled-components'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, Link } from 'react-router-dom'
 import { Button } from './Button'
 import { LogoutButton } from './LogoutButton'
 import { api } from '../api/api'
@@ -36,7 +35,7 @@ const NavLinks = styled.div`
   gap: 15px;
 `
 
-const NavLink = styled.span`
+const NavLink = styled(Link)`
   cursor: pointer;
   font-size: 1rem;
   font-family: 'Roboto Mono', monospace;
@@ -88,15 +87,11 @@ export const NavBar = ({ token, showLogin, setShowLogin, handleLogout }) => {
       <Logo onClick={() => navigate('/')}>Happy Thoughts</Logo>
 
       <NavLinks>
-        <NavLink onClick={() => navigate('/')}>All Thoughts</NavLink>
         {isLoggedIn && (
           <>
-            <NavLink onClick={() => navigate('/user-thoughts')}>
-              My Thoughts
-            </NavLink>
-            <NavLink onClick={() => navigate('/liked-thoughts')}>
-              Liked Thoughts
-            </NavLink>
+            <NavLink to='/'>All Thoughts</NavLink>
+            <NavLink to='/user-thoughts'>My Thoughts</NavLink>
+            <NavLink to='/liked-thoughts'>Liked Thoughts</NavLink>
           </>
         )}
       </NavLinks>

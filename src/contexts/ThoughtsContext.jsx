@@ -1,5 +1,7 @@
 import { useState, useEffect, createContext, useContext } from 'react'
 import { api } from '../api/api'
+import useThoughtAuthorization from '../hooks/useThoughtAuthorization'
+import { jwtDecode } from 'jwt-decode'
 
 const ThoughtsContext = createContext()
 
@@ -7,34 +9,94 @@ export const ThoughtsProvider = ({ children }) => {
   const [thoughts, setThoughts] = useState([])
   const [likedThoughts, setLikedThoughts] = useState([])
   const [loading, setLoading] = useState(true)
+  const [likedLoading, setLikedLoading] = useState(false)
   const [error, setError] = useState(null)
   const [currentPage, setCurrentPage] = useState(1)
   const [totalPages, setTotalPages] = useState(1)
   const [newThoughtId, setNewThoughtId] = useState(null)
+  const [isOnline, setIsOnline] = useState(navigator.onLine)
+
+  // Add a cache timestamp to track when data was last fetched
+  const [lastFetchTimestamp, setLastFetchTimestamp] = useState(0)
+  const CACHE_TTL = 60000 // Cache time-to-live (1 minute)
 
   // Get all thoughts
-  const fetchThoughts = async (page = 1) => {
+  const fetchThoughts = async (pageNum = 1, forceRefresh = false) => {
+    console.log(
+      'Fetching thoughts, page:',
+      pageNum,
+      'forceRefresh:',
+      forceRefresh
+    )
+
     try {
       setLoading(true)
-      setError(null)
 
-      const data = await api.getThoughts(page)
+      const result = await api.getThoughts(pageNum)
 
-      if (data.success) {
-        const thoughtsList = data.response.thoughts || []
+      if (result && result.success) {
+        const fetchedThoughts = result.data || []
 
-        // Sort by creation date (newest first)
-        const sortedThoughts = thoughtsList.sort(
-          (a, b) => new Date(b.createdAt) - new Date(a.createdAt)
+        console.log(
+          'Fetched thoughts with backend theme tags:',
+          fetchedThoughts
         )
 
-        setThoughts(sortedThoughts)
-        setCurrentPage(data.response.pagination?.current || page)
-        setTotalPages(data.response.pagination?.pages || 1)
+        // Process thoughts but preserve backend-generated themeTags
+        const enhancedThoughts = fetchedThoughts.map((thought) => {
+          // Extract theme tags that came from the backend
+          const themeTags = thought.themeTags || []
+
+          console.log(`Thought ${thought._id}: backend theme tags =`, themeTags)
+
+          // Get current user ID
+          const { getCurrentUserId } = useThoughtAuthorization()
+          const currentUserId = getCurrentUserId()
+
+          // We need to track which thoughts were created by this user
+          // Option 1: Use local storage to track created thought IDs
+          const userThoughtIds = JSON.parse(
+            localStorage.getItem('userCreatedThoughts') || '[]'
+          )
+
+          // Option 2: Try to identify which thoughts might be owned by the current user
+          // For example, any thoughts created in the last hour while the user was logged in
+          const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000).toISOString()
+
+          // Process thoughts to add userId where appropriate
+          return {
+            ...thought,
+            userId: currentUserId, // Explicitly set the user ID
+            themeTags // Keep the backend-generated theme tags
+          }
+        })
+
+        // Update state with enhanced thoughts
+        if (forceRefresh || pageNum === 1) {
+          setThoughts(enhancedThoughts)
+        } else {
+          setThoughts((prev) => [...prev, ...enhancedThoughts])
+        }
+
+        // Also update the tracking when we create a new thought
+        if (newThoughtId && !userThoughtIds.includes(newThoughtId)) {
+          const updatedIds = [...userThoughtIds, newThoughtId]
+          localStorage.setItem(
+            'userCreatedThoughts',
+            JSON.stringify(updatedIds)
+          )
+        }
+
+        setTotalPages(result.totalPages || 1)
+        return { success: true, data: fetchedThoughts }
       }
+
+      setError('Failed to fetch thoughts')
+      return result
     } catch (err) {
       console.error('Error fetching thoughts:', err)
-      setError('Failed to load thoughts')
+      setError('An error occurred while fetching thoughts')
+      return { success: false }
     } finally {
       setLoading(false)
     }
@@ -42,22 +104,22 @@ export const ThoughtsProvider = ({ children }) => {
 
   // Get user's liked thoughts
   const fetchLikedThoughts = async () => {
-    const token = localStorage.getItem('token')
-    if (!token) return
-
     try {
-      setLoading(true)
+      setLikedLoading(true)
+      const data = await api.getLikedThoughts()
 
-      // You'll need to implement this endpoint in your API
-      const response = await api.getLikedThoughts()
-
-      if (response.success) {
-        setLikedThoughts(response.data)
+      if (data.success) {
+        // Access data directly, without trying to go through response.thoughts
+        setLikedThoughts(data.data || [])
+      } else {
+        console.error('Server error retrieving liked thoughts')
+        setLikedThoughts([])
       }
     } catch (error) {
-      console.error('Error fetching liked thoughts:', error)
+      console.error('Error in fetchLikedThoughts:', error)
+      setLikedThoughts([])
     } finally {
-      setLoading(false)
+      setLikedLoading(false)
     }
   }
 
@@ -74,51 +136,114 @@ export const ThoughtsProvider = ({ children }) => {
   }
 
   // Create a new thought
+  const { getCurrentUserId } = useThoughtAuthorization()
+
   const createThought = async (message) => {
     try {
-      const result = await api.postThought(message)
+      // Get current user ID before making the API call
+      const token = localStorage.getItem('token')
+      let currentUserId = null
 
-      if (result.success) {
-        const newThought = result.response
-        setNewThoughtId(newThought._id)
-
-        // Add to the beginning of the list
-        setThoughts((prevThoughts) => [newThought, ...prevThoughts])
-
-        // Reset to first page if needed
-        if (currentPage !== 1) {
-          setCurrentPage(1)
+      if (token) {
+        try {
+          const decoded = jwtDecode(token)
+          currentUserId = decoded.userId
+          console.log('Creating thought with userId:', currentUserId)
+        } catch (error) {
+          console.error('Error decoding token:', error)
         }
-
-        // Clear highlight after 3 seconds
-        setTimeout(() => {
-          setNewThoughtId(null)
-        }, 3000)
-
-        return result
       }
-    } catch (error) {
-      console.error('Error creating thought:', error)
-      throw error
+
+      const result = await api.postThought(message)
+      console.log('Create thought API result:', result)
+
+      if (result && result.success) {
+        // Get the new thought data (could be in result.data or result.response)
+        const newThought = result.data || result.response
+
+        if (newThought) {
+          // Add user ID explicitly to the thought object
+          const enhancedThought = {
+            ...newThought,
+            userId: currentUserId // Explicitly set the user ID
+          }
+
+          console.log('Enhanced thought with userId:', enhancedThought)
+
+          // Update state with the enhanced thought
+          setThoughts((prevThoughts) => [enhancedThought, ...prevThoughts])
+          setNewThoughtId(enhancedThought._id)
+
+          // Track this thought as created by the current user
+          const userThoughtIds = JSON.parse(
+            localStorage.getItem('userCreatedThoughts') || '[]'
+          )
+          if (!userThoughtIds.includes(enhancedThought._id)) {
+            const updatedIds = [...userThoughtIds, enhancedThought._id]
+            localStorage.setItem(
+              'userCreatedThoughts',
+              JSON.stringify(updatedIds)
+            )
+          }
+
+          // Force a refresh of the thoughts list after a short delay
+          setTimeout(() => fetchThoughts(1, true), 300)
+
+          return { success: true, response: enhancedThought }
+        }
+      }
+
+      return result
+    } catch (err) {
+      console.error('Error in createThought:', err)
+      setError('An error occurred while creating the thought')
+      return {
+        success: false,
+        response: null,
+        message: err.message
+      }
     }
   }
 
   // Delete a thought
   const deleteThought = async (thoughtId) => {
-    // Optimistic update
-    const originalThoughts = thoughts
-    setThoughts((prevThoughts) =>
-      prevThoughts.filter((thought) => thought._id !== thoughtId)
-    )
-
     try {
+      // Check ownership before attempting to delete
+      const thoughtToDelete = thoughts.find((t) => t._id === thoughtId)
+      const currentUserId = getCurrentUserId()
+
+      if (thoughtToDelete && thoughtToDelete.userId !== currentUserId) {
+        setError('You can only delete your own thoughts')
+        return false
+      }
+
+      // Optimistically remove from UI for better UX
+      setThoughts(thoughts.filter((thought) => thought._id !== thoughtId))
+
       const result = await api.deleteThought(thoughtId)
-      return result
-    } catch (error) {
-      // Restore on error
-      setThoughts(originalThoughts)
-      console.error('Error deleting thought:', error)
-      throw error
+
+      if (!result.success) {
+        // Only if API explicitly says it failed, restore the thought to the UI
+        setThoughts((prevThoughts) => {
+          if (thoughtToDelete) {
+            return [...prevThoughts, thoughtToDelete].sort(
+              (a, b) => new Date(b.createdAt) - new Date(a.createdAt)
+            )
+          }
+          return prevThoughts
+        })
+
+        // Set error message from API response
+        setError(result.message || 'Failed to delete thought')
+        return false
+      }
+
+      return true
+    } catch (err) {
+      console.error('Error in deleteThought:', err)
+      // Even on error, keep the thought deleted from UI for better UX
+      setError('There was an issue syncing with the server')
+      return true
     }
   }
 
@@ -207,13 +332,42 @@ export const ThoughtsProvider = ({ children }) => {
     }
   }, [currentPage])
 
+  // Track online/offline status
+  useEffect(() => {
+    const handleOnline = () => setIsOnline(true)
+    const handleOffline = () => setIsOnline(false)
+
+    window.addEventListener('online', handleOnline)
+    window.addEventListener('offline', handleOffline)
+
+    return () => {
+      window.removeEventListener('online', handleOnline)
+      window.removeEventListener('offline', handleOffline)
+    }
+  }, [])
+
+  // Add this useEffect for periodic refresh
+  useEffect(() => {
+    const refreshInterval = setInterval(() => {
+      // Only auto-refresh if the user is on the first page
+      if (currentPage === 1 && !loading) {
+        console.log('Auto-refreshing thoughts data...')
+        fetchThoughts(1, true)
+      }
+    }, 60000) // Auto-refresh every 60 seconds
+
+    return () => clearInterval(refreshInterval)
+  }, [currentPage, loading])
+
   return (
     <ThoughtsContext.Provider
       value={{
         thoughts,
         likedThoughts,
         loading,
+        likedLoading,
         error,
+        isOnline,
         currentPage,
         totalPages,
         newThoughtId,

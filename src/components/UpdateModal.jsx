@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import styled from 'styled-components'
 
 const Overlay = styled.div`
@@ -74,11 +74,17 @@ const Button = styled.button`
 export const UpdateModal = ({ isOpen, onClose, initialMessage, onSave }) => {
   const [message, setMessage] = useState(initialMessage || '')
 
+  useEffect(() => {
+    if (initialMessage !== undefined) {
+      setMessage(initialMessage)
+    }
+  }, [initialMessage])
+
   if (!isOpen) return null
 
   const handleSubmit = (e) => {
     e.preventDefault()
-    if (message.trim()) {
+    if (message && message.trim()) {
       onSave(message)
     }
   }

@@ -6,6 +6,9 @@ import { useThoughtAuthorization } from '../hooks/useThoughtAuthorization'
 import { media } from '../media'
 import { formatDate } from '../utils/dateHelpers'
 import { Button } from './Button'
+import { getThoughtWithEmoji, restoreEmoji } from '../utils/emojiUtils'
+import TagList from './TagList'
+import { extractHashtags } from '../utils/tagHelpers'
 
 const fadeIn = keyframes`
   from {
@@ -44,30 +47,6 @@ const ThoughtContainer = styled.div`
     width: 500px;
   }
 `
-const Tag = styled.span`
-  background-color: #f0f0f0;
-  border: 1px solid #ccc;
-  border-radius: 12px;
-  padding: 2px 8px;
-  font-size: 10px;
-  color: #666;
-  font-weight: 500;
-  text-transform: lowercase;
-
-  &:before {
-    content: '#';
-    color: #999;
-  }
-`
-const TagsSection = styled.div`
-  display: flex;
-  flex-direction: row;
-  align-items: center;
-  justify-content: flex-start;
-  gap: 4px;
-  margin-bottom: 8px;
-  flex-wrap: wrap; /* Allow tags to wrap to next line */
-`
 
 const MessageSection = styled.p`
   width: 100%;
@@ -85,7 +64,7 @@ const TopSection = styled.div`
 const ActionRow = styled.div`
   display: flex;
   flex-direction: row;
-  align-items: center;
+  align-items: flex-end;
   justify-content: flex-start;
   gap: 8px;
   width: 100%;
@@ -96,11 +75,14 @@ const BottomSection = styled.div`
   justify-content: space-between;
   align-items: center;
   margin-top: 12px;
+  width: 100%;
 `
 
 const LikeCounterStyled = styled.div`
   display: flex;
   align-items: center;
+  justify-content: flex-end;
+  width: 100%;
 `
 
 export const TimeStamp = styled.span`
@@ -114,60 +96,65 @@ export const TimeStamp = styled.span`
 `
 export const Thought = ({
   _id,
-  message,
-  isNew,
+  message = '', // Add default value to prevent undefined error
+  isNew, // This should be passed from parent
   hearts: initialHearts,
   createdAt,
-  tags,
+  tags = [], // Add default empty array
   userId, // This is the thought creator's ID
   username,
   isAnonymous = true,
   onDelete,
-  onUpdate,
-  currentUserId
+  onUpdate
 }) => {
   const { isLiked, likeCount, handleLike } = useLikeSystem(_id, initialHearts)
-  const { canUpdateThought } = useThoughtAuthorization()
+  const { getCurrentUserId } = useThoughtAuthorization()
 
-  // Reconstruct thought object for authorization check
-  const thought = {
-    _id,
-    message,
-    hearts: initialHearts,
-    createdAt,
-    tags,
-    userId, // important for authorization check
-    username
-  }
+  // Get current user ID to compare with thought owner
+  const currentUserId = getCurrentUserId()
 
-  // Handle update action
+  // Check if user owns this thought (can edit/delete)
+  const isOwnThought = userId && currentUserId && userId === currentUserId
+
+  // Log for debugging
+  console.log(
+    `Thought ${_id?.substring(
+      0,
+      8
+    )}: userId=${userId}, currentUser=${currentUserId}, isOwn=${isOwnThought}`
+  )
+  console.log(`Thought ${_id?.substring(0, 8)}: tags=`, tags)
+
+  // Extract tags from message if none provided
+  const extractedTags =
+    tags && tags.length > 0 ? tags : extractHashtags(message, true) // true to keep # symbol
+
   const handleUpdate = () => {
     if (onUpdate) {
-      onUpdate(thought)
+      onUpdate({
+        _id,
+        message,
+        hearts: initialHearts,
+        createdAt,
+        tags,
+        userId,
+        username
+      })
     }
   }
 
-  // Handle delete action
-  const handleDelete = () => {
-    if (onDelete) {
-      onDelete(_id)
+  const handleDelete = async () => {
+    try {
+      await onDelete(_id)
+    } catch (error) {
+      console.error('Error deleting thought:', error)
     }
   }
 
-  // Determine if user can edit/delete this thought
-  const userCanUpdateThought = canUpdateThought
-    ? canUpdateThought(thought)
-    : false
-
-  // Set flags for showing edit/delete buttons
-  const showEditButton = userCanUpdateThought
-  const showDeleteButton = userCanUpdateThought
-
+  // Format stuff for display
   const formattedDate = formatDate(createdAt)
-
   const displayLikeCount =
     typeof likeCount === 'object' ? likeCount.hearts || 0 : likeCount
-
   const displayMessage =
     typeof message === 'object'
       ? message.message || 'No message content'
@@ -176,28 +163,18 @@ export const Thought = ({
   return (
     <ThoughtContainer $isNew={isNew}>
       <TopSection>
-        <TagsSection>
-          {tags &&
-            tags.length > 0 &&
-            tags.map((tag, index) => <Tag key={index}>{tag}</Tag>)}
-        </TagsSection>
-        {/* Only show edit button if user owns the thought */}
-        {showEditButton && (
-          <Button variant='authed' text='Edit' onClick={handleUpdate} />
-        )}
+        <TagList tags={extractedTags} />
       </TopSection>
 
       <MessageSection>{displayMessage}</MessageSection>
 
       <BottomSection>
         <ActionRow>
-          {/* Only show delete button if user owns the thought */}
-          {showDeleteButton && (
-            <Button
-              variant='authed'
-              text='Delete'
-              onClick={handleDelete}
-            />
+          {isOwnThought && (
+            <ActionRow>
+              <Button variant='danger' onClick={handleDelete} text='Delete' />
+              <Button variant='authed' onClick={handleUpdate} text='Update' />
+            </ActionRow>
           )}
           <LikeCounterStyled>
             <p>{`${displayLikeCount} x`}</p>
