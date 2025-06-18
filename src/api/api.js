@@ -71,7 +71,7 @@ const extractHashtags = (message) => {
   return matches.map((tag) => tag.slice(1)) // Remove the # character
 }
 
-const fetchWithTimeout = (url, options, timeout = 10000) => {
+const fetchWithTimeout = (url, options, timeout = 30000) => {
   return Promise.race([
     fetch(url, options),
     new Promise((_, reject) =>
@@ -107,109 +107,95 @@ const fetchWithRetry = async (url, options, retries = 3) => {
   throw lastError
 }
 
-export const api = {
-  // Get thoughts - NO authentication required
-  getThoughts: async (page = 1, limit = 10, forceRefresh = false) => {
-    const cacheKey = `thoughts_${page}_${limit}`
-    const cachedData = cache.get(cacheKey)
+// Normalize response function
+const normalizeResponse = (rawData) => {
+  // Create a normalized response
+  let result = { success: false, data: [] }
 
-    // Don't use cache if forceRefresh is true
-    if (cachedData && !forceRefresh) {
-      console.log('Using cached thoughts data')
-      return cachedData
-    }
-
-    const url = `${API_BASE_URL}/thoughts?page=${page}&limit=${limit}`
-    console.log('Fetching thoughts from:', url)
-
-    try {
-      const response = await fetchWithRetry(url, {
-        method: 'GET',
-        headers: getAuthHeaders(false)
-      })
-
-      if (!response.ok) {
-        throw new Error(`API error: ${response.status}`)
-      }
-
-      const rawData = await response.json()
-      console.log('Raw API response:', rawData)
-
-      // Create a normalized response
-      let result = { success: false, data: [] }
-
-      // Handle the observed response format:
-      // { success: true, response: {...}, message: "All thoughts were successfully fetched" }
-      if (rawData && rawData.success) {
-        if (rawData.response) {
-          // Check if response contains thoughts array or is the thoughts array
-          if (
-            rawData.response.thoughts &&
-            Array.isArray(rawData.response.thoughts)
-          ) {
-            result = {
-              success: true,
-              data: rawData.response.thoughts,
-              totalPages: rawData.response.pagination?.pages || 1
-            }
-          } else if (Array.isArray(rawData.response)) {
-            result = {
-              success: true,
-              data: rawData.response,
-              totalPages: 1
-            }
-          } else {
-            // If response is a single thought or object with thoughts
-            console.log('Response structure:', rawData.response)
-            const thoughtsArray =
-              Array.isArray(rawData.response) || rawData.response.data || []
-            result = {
-              success: true,
-              data: thoughtsArray,
-              totalPages: rawData.response.pagination?.pages || 1
-            }
-          }
-        } else if (rawData.data && Array.isArray(rawData.data)) {
-          // Standard format with data property
-          result = {
-            success: true,
-            data: rawData.data,
-            totalPages: rawData.totalPages || 1
-          }
-        }
-      } else if (Array.isArray(rawData)) {
-        // Direct array response
+  // Handle the observed response format:
+  // { success: true, response: {...}, message: "All thoughts were successfully fetched" }
+  if (rawData && rawData.success) {
+    if (rawData.response) {
+      // Check if response contains thoughts array or is the thoughts array
+      if (
+        rawData.response.thoughts &&
+        Array.isArray(rawData.response.thoughts)
+      ) {
         result = {
           success: true,
-          data: rawData,
+          data: rawData.response.thoughts,
+          totalPages: rawData.response.pagination?.pages || 1
+        }
+      } else if (Array.isArray(rawData.response)) {
+        result = {
+          success: true,
+          data: rawData.response,
           totalPages: 1
         }
       } else {
-        console.error('Unexpected API response format:', rawData)
-
-        // Try to extract any possible data
-        const possibleData =
-          rawData.response?.thoughts ||
-          rawData.response?.data ||
-          rawData.response ||
-          rawData.data ||
-          []
-
+        // If response is a single thought or object with thoughts
+        console.log('Response structure:', rawData.response)
+        const thoughtsArray =
+          Array.isArray(rawData.response) || rawData.response.data || []
         result = {
-          success: false,
-          data: Array.isArray(possibleData) ? possibleData : [],
-          message: rawData?.message || 'Unexpected response format'
+          success: true,
+          data: thoughtsArray,
+          totalPages: rawData.response.pagination?.pages || 1
         }
       }
+    } else if (rawData.data && Array.isArray(rawData.data)) {
+      // Standard format with data property
+      result = {
+        success: true,
+        data: rawData.data,
+        totalPages: rawData.totalPages || 1
+      }
+    }
+  } else if (Array.isArray(rawData)) {
+    // Direct array response
+    result = {
+      success: true,
+      data: rawData,
+      totalPages: 1
+    }
+  } else {
+    console.error('Unexpected API response format:', rawData)
 
-      console.log('Normalized response:', result)
+    // Try to extract any possible data
+    const possibleData =
+      rawData.response?.thoughts ||
+      rawData.response?.data ||
+      rawData.response ||
+      rawData.data ||
+      []
 
-      // Cache the results unless forceRefresh was specified
-      if (result.success && !forceRefresh) {
-        cache.set(cacheKey, result, 30000) // Cache for 30 seconds
+    result = {
+      success: false,
+      data: Array.isArray(possibleData) ? possibleData : [],
+      message: rawData?.message || 'Unexpected response format'
+    }
+  }
+
+  console.log('Normalized response:', result)
+
+  return result
+}
+
+export const api = {
+  // Get thoughts - NO authentication required
+  getThoughts: async (page = 1, limit = 10) => {
+    try {
+      const response = await fetchWithRetry(
+        `${API_BASE_URL}/thoughts?page=${page}&limit=${limit}`
+      )
+
+      if (!response.ok) {
+        throw new Error(`Failed to fetch thoughts: ${response.status}`)
       }
 
-      return result
+      const result = await response.json()
+      console.log('API response with potential theme tags:', result)
+      return normalizeResponse(result)
     } catch (error) {
       console.error('API fetch error:', error)
       return {
@@ -580,9 +566,3 @@ export const api = {
     }
   }
 }
-
-// In your API response handling:
-
-const result = await response.json()
-console.log('API response with potential theme tags:', result)
-return normalizeResponse(result)

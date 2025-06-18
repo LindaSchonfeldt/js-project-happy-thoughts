@@ -1,18 +1,18 @@
-import React, { useState, useEffect } from 'react'
-import { GlobalStyles } from './GlobalStyles'
-import { ThoughtForm } from './components/ThoughtForm'
-import { Thought } from './components/Thought'
-import { LikeCounter } from './components/LikeCounter'
-import { Pagination } from './components/Pagination'
+import React, { useEffect, useState } from 'react'
+import { Route, BrowserRouter as Router, Routes } from 'react-router-dom'
+
+import { LikedThoughts } from './components/LikedThoughts'
+import { Loader } from './components/Loader'
 import { LoginSignup } from './components/LoginSignup'
 import { NavBar } from './components/NavBar'
-import { useThoughts } from './contexts/ThoughtsContext'
-import { Loader } from './components/Loader'
-import { UpdateModal } from './components/UpdateModal'
-import { BrowserRouter as Router, Routes, Route } from 'react-router-dom'
-import { LikedThoughts } from './components/LikedThoughts'
+import { Pagination } from './components/Pagination'
 import { ServiceStatus } from './components/ServiceStatus'
+import { Thought } from './components/Thought'
+import { ThoughtForm } from './components/ThoughtForm'
+import { UpdateModal } from './components/UpdateModal'
 import { UserThoughts } from './components/UserThoughts'
+import { useThoughts } from './contexts/ThoughtsContext'
+import { GlobalStyles } from './GlobalStyles'
 
 export const App = () => {
   const [token, setToken] = useState(localStorage.getItem('token'))
@@ -195,10 +195,11 @@ export const App = () => {
                 message={thought.message}
                 hearts={thought.hearts}
                 createdAt={thought.createdAt}
-                tags={thought.tags}
-                userId={thought.userId || thought.user?._id || thought.user}
+                tags={thought.tags || []} // your client‐side hashtags
+                themeTags={thought.themeTags || []} // ← pass backend tags here
+                userId={thought.userId}
                 username={thought.username}
-                isNew={thought._id === newThoughtId} // This is crucial for animation
+                isNew={thought._id === newThoughtId}
                 onDelete={deleteThought}
                 onUpdate={handleOpenUpdateModal}
               />

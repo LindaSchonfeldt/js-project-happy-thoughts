@@ -8,7 +8,6 @@ import { formatDate } from '../utils/dateHelpers'
 import { Button } from './Button'
 import { getThoughtWithEmoji, restoreEmoji } from '../utils/emojiUtils'
 import TagList from './TagList'
-import { extractHashtags } from '../utils/tagHelpers'
 
 const fadeIn = keyframes`
   from {
@@ -101,6 +100,7 @@ export const Thought = ({
   hearts: initialHearts,
   createdAt,
   tags = [], // Add default empty array
+  themeTags = [],
   userId, // This is the thought creator's ID
   username,
   isAnonymous = true,
@@ -112,6 +112,9 @@ export const Thought = ({
 
   // Get current user ID to compare with thought owner
   const currentUserId = getCurrentUserId()
+
+  // merge both arrays
+  const allTags = [...tags, ...themeTags]
 
   // Check if user owns this thought (can edit/delete)
   const isOwnThought = userId && currentUserId && userId === currentUserId
@@ -127,7 +130,9 @@ export const Thought = ({
 
   // Extract tags from message if none provided
   const extractedTags =
-    tags && tags.length > 0 ? tags : extractHashtags(message, true) // true to keep # symbol
+    tags && tags.length > 0 ? tags : message.match(/#[\w]+/g) || [] // Extract hashtags from message text
+
+  console.log(`Thought ${_id?.substring(0, 8)}: extracted tags=`, extractedTags)
 
   const handleUpdate = () => {
     if (onUpdate) {
@@ -163,7 +168,7 @@ export const Thought = ({
   return (
     <ThoughtContainer $isNew={isNew}>
       <TopSection>
-        <TagList tags={extractedTags} />
+        <TagList tags={allTags} />
       </TopSection>
 
       <MessageSection>{displayMessage}</MessageSection>
