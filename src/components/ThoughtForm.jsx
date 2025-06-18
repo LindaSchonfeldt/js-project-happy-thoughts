@@ -92,7 +92,7 @@ const StyledError = styled.div`
 // Form component to accept thoughts from the user
 // with usePostThought (hook) that handles the actual posting logic
 
-export const ThoughtForm = ({ onSubmit }) => {
+export default function ThoughtForm({ onSubmit }) {
   const [message, setMessage] = useState('')
   const [charCount, setCharCount] = useState(0) // Add this line if missing
   const [error, setError] = useState('')

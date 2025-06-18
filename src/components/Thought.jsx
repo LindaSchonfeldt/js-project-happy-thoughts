@@ -173,6 +173,7 @@ export const Thought = ({
     <ThoughtContainer $isNew={isNew}>
       <TopSection>
         <TagList tags={allTags} />
+        <TimeStamp>{formattedDate}</TimeStamp>
       </TopSection>
 
       <MessageSection>{displayMessage}</MessageSection>
@@ -197,7 +198,6 @@ export const Thought = ({
         </ActionRow>
       </BottomSection>
       <StyledUserName>{isAnonymous ? 'Anonymous' : username}</StyledUserName>
-      <TimeStamp>{formattedDate}</TimeStamp>
     </ThoughtContainer>
   )
 }
