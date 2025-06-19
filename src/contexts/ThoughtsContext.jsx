@@ -176,6 +176,46 @@ export const ThoughtsProvider = ({ children }) => {
     }
   }
 
+  // First, add the updateThought function definition if not already there
+  const updateThought = async (thoughtId, message) => {
+    try {
+      const result = await api.updateThought(thoughtId, message)
+
+      if (result.success) {
+        // Update the thought in the list
+        setThoughts((prev) =>
+          prev.map((thought) =>
+            thought._id === thoughtId ? { ...thought, message } : thought
+          )
+        )
+
+        // Show success notification
+        setNotification({
+          type: 'success',
+          message: 'Thought updated successfully!'
+        })
+        setTimeout(() => setNotification(null), 3000)
+
+        return result
+      } else {
+        setNotification({
+          type: 'error',
+          message: result.message || 'Failed to update thought'
+        })
+        setTimeout(() => setNotification(null), 3000)
+        return result
+      }
+    } catch (error) {
+      console.error('Error updating thought:', error)
+      setNotification({
+        type: 'error',
+        message: 'Could not update thought'
+      })
+      setTimeout(() => setNotification(null), 3000)
+      throw error
+    }
+  }
+
   useEffect(() => {
     fetchThoughts(currentPage)
   }, [currentPage])
@@ -194,7 +234,8 @@ export const ThoughtsProvider = ({ children }) => {
         notification,
         setNotification,
         createThought,
-        getCurrentUserId // Include this utility function
+        updateThought,
+        getCurrentUserId
       }}
     >
       {children}

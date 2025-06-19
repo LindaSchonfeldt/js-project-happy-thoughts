@@ -90,6 +90,14 @@ export const StyledButton = styled.button`
     }
 
 `}
+
+  // Add more visible active state for liked buttons
+  ${(props) =>
+    props.$isLiked &&
+    `
+    background-color: var(--color-primary);
+    transform: scale(1.1);
+  `}
 `
 export const Button = ({
   text,

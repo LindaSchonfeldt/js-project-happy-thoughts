@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import styled from 'styled-components'
 
 const Overlay = styled.div`
@@ -51,6 +51,7 @@ const ButtonRow = styled.div`
 `
 
 const Button = styled.button`
+  font-size: 14px;
   padding: 8px 16px;
   border-radius: 0px;
   cursor: pointer;
@@ -58,6 +59,7 @@ const Button = styled.button`
   ${(props) =>
     props.primary &&
     `
+    text-family: 'Roboto Mono', Arial, Helvetica, sans-serif;
     background: var(--color-secondary);
     color: var(--color-text);
     border: none;
@@ -66,6 +68,7 @@ const Button = styled.button`
   ${(props) =>
     props.secondary &&
     `
+    text-family: 'Roboto Mono', Arial, Helvetica, sans-serif;
     background: transparent;
     border: 1px solid #ddd;
   `}

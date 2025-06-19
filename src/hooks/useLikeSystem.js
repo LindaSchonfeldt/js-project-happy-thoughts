@@ -1,15 +1,25 @@
 import { useState } from 'react'
+
 import { api } from '../api/api'
 
 export const useLikeSystem = (thoughtId, initialHearts) => {
-  // Track the total like count, starting with the hearts from API
-  const [likeCount, setLikeCount] = useState(initialHearts)
   // Track if the current user has liked this post (persisted via localStorage)
   const [isLiked, setIsLiked] = useState(() => {
-    // Check localStorage on component mount to see if user previously liked this post
-    const likedPosts = JSON.parse(localStorage.getItem('likedPosts') || '[]')
-    return likedPosts.includes(thoughtId)
+    try {
+      // Check localStorage on component mount
+      const likedPosts = JSON.parse(localStorage.getItem('likedPosts') || '[]')
+      return likedPosts.includes(thoughtId)
+    } catch (e) {
+      console.error('Error reading from localStorage:', e)
+      return false
+    }
   })
+
+  // Track the total like count, starting with hearts from API
+  // If user has already liked it from localStorage, make sure UI is consistent
+  const [likeCount, setLikeCount] = useState(
+    isLiked ? Math.max(initialHearts, 1) : initialHearts
+  )
 
   // Update localStorage when like status changes
   const updateLocalStorage = (isLiked) => {

@@ -192,7 +192,7 @@ export const Thought = ({
             variant='icon'
             icon={'❤️'}
             onClick={handleLike}
-            $isLiked={isLiked}
+            isLiked={isLiked}
           />
         </LikeCounterStyled>
       </BottomSection>
