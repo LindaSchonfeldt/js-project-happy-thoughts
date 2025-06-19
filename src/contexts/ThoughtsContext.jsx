@@ -7,7 +7,30 @@ import React, {
 } from 'react'
 
 import { api } from '../api/api'
-import useThoughtAuthorization from '../hooks/useThoughtAuthorization.js'
+
+// Create a utility function instead of importing the hook
+const getCurrentUserIdFromToken = () => {
+  try {
+    const token = localStorage.getItem('token')
+    if (!token) return null
+
+    // Basic JWT decode
+    const base64Url = token.split('.')[1]
+    const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/')
+    const jsonPayload = decodeURIComponent(
+      atob(base64)
+        .split('')
+        .map((c) => '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2))
+        .join('')
+    )
+
+    const decoded = JSON.parse(jsonPayload)
+    return decoded.userId || decoded.id || decoded.sub
+  } catch (error) {
+    console.error('Error decoding token:', error)
+    return null
+  }
+}
 
 const ThoughtsContext = createContext()
 
@@ -19,7 +42,8 @@ export const ThoughtsProvider = ({ children }) => {
   const [totalPages, setTotalPages] = useState(1)
   const [notification, setNotification] = useState(null)
 
-  const { getCurrentUserId } = useThoughtAuthorization()
+  // Use the utility function directly instead of the hook
+  const getCurrentUserId = getCurrentUserIdFromToken
 
   const fetchThoughts = useCallback(
     async (page = 1) => {
@@ -169,7 +193,8 @@ export const ThoughtsProvider = ({ children }) => {
         deleteThought,
         notification,
         setNotification,
-        createThought
+        createThought,
+        getCurrentUserId // Include this utility function
       }}
     >
       {children}
