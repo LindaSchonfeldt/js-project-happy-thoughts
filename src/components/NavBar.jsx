@@ -97,7 +97,7 @@ export const NavBar = ({ token, showLogin, setShowLogin, handleLogout }) => {
         {isLoggedIn && (
           <>
             <NavLink to='/'>All Thoughts</NavLink>
-            <NavLink to='/user-thoughts'>My Thoughts</NavLink>
+            <NavLink to='/user-thoughts'>Created Thoughts</NavLink>
             <NavLink to='/liked-thoughts'>Liked Thoughts</NavLink>
           </>
         )}

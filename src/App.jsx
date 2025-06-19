@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react'
-import { Route, BrowserRouter as Router, Routes } from 'react-router-dom'
+import { Route, BrowserRouter as Router, Routes, useLocation } from 'react-router-dom'
 
 import { LikedThoughts } from './components/LikedThoughts'
 import { Loader } from './components/Loader'
@@ -234,7 +234,8 @@ export const App = () => {
           }
         />
 
-        {totalPages > 1 && (
+        {/* Only show main pagination on the home route */}
+        {location.pathname === '/' && (
           <Pagination
             currentPage={currentPage}
             totalPages={totalPages}
