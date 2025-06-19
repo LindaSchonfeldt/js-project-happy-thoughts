@@ -388,18 +388,22 @@ export const api = {
         console.warn('Server error when deleting thought:', thoughtId)
 
         // Try to get error details if available
-        const errorData = await response
-          .text()
-          .catch(() => 'Unknown server error')
-        console.error('Server error details:', errorData)
+        let errorDetails = 'Unknown server error'
+        try {
+          const errorText = await response.text()
+          errorDetails = errorText
+          console.error('Server error details:', errorDetails)
+        } catch (e) {
+          console.error('Could not parse error response:', e)
+        }
 
-        // Return a more detailed response so the UI can show a notification
+        // Return a special response for 500 errors
         return {
-          success: true, // Still return success for UI consistency
+          success: true, // Return true so UI doesn't revert
           response: null,
-          message:
-            'Thought was removed from your view, but there was an error on the server',
-          serverError: true // Add flag to indicate server issue
+          message: 'Thought was removed from your view',
+          serverError: true,
+          errorDetails
         }
       }
 

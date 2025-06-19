@@ -79,9 +79,15 @@ export const ThoughtsProvider = ({ children }) => {
 
       // Check for server errors that were masked as success
       if (result.serverError) {
+        // Log additional details for debugging
+        console.log(
+          'Server error details:',
+          result.errorDetails || 'No details available'
+        )
+
         setNotification({
           type: 'warning',
-          message: result.message
+          message: 'Thought removed from view, but server reported an error'
         })
         setTimeout(() => setNotification(null), 3000)
         return true // Still return true since UI removal was successful
@@ -109,6 +115,43 @@ export const ThoughtsProvider = ({ children }) => {
     }
   }
 
+  // First, add the createThought function (if not already there)
+  const createThought = async (message) => {
+    try {
+      const result = await api.postThought(message)
+
+      if (result.success) {
+        const newThought = result.response
+        // Add the new thought to the beginning of the array
+        setThoughts((prev) => [newThought, ...prev])
+
+        // Show success notification
+        setNotification({
+          type: 'success',
+          message: 'Thought posted successfully!'
+        })
+        setTimeout(() => setNotification(null), 3000)
+
+        return result
+      } else {
+        setNotification({
+          type: 'error',
+          message: result.message || 'Failed to post thought'
+        })
+        setTimeout(() => setNotification(null), 3000)
+        return result
+      }
+    } catch (error) {
+      console.error('Error creating thought:', error)
+      setNotification({
+        type: 'error',
+        message: 'Error posting thought'
+      })
+      setTimeout(() => setNotification(null), 3000)
+      throw error
+    }
+  }
+
   useEffect(() => {
     fetchThoughts(currentPage)
   }, [currentPage])
@@ -123,9 +166,10 @@ export const ThoughtsProvider = ({ children }) => {
         totalPages,
         fetchThoughts,
         setCurrentPage,
-        deleteThought, // Add this!
-        notification, // Add this!
-        setNotification // Include this to allow clearing notifications
+        deleteThought,
+        notification,
+        setNotification,
+        createThought
       }}
     >
       {children}

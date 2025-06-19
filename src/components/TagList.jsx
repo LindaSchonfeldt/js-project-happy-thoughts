@@ -28,9 +28,12 @@ export const TagList = ({ tags = [] }) => {
     return null
   }
 
+  // Remove duplicates
+  const uniqueTags = [...new Set(tags)]
+
   return (
     <StyledTags>
-      {tags.map((tag, index) => (
+      {uniqueTags.map((tag, index) => (
         <Tag key={index}>{tag.startsWith('#') ? tag : `#${tag}`}</Tag>
       ))}
     </StyledTags>
