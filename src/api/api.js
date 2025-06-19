@@ -1,7 +1,7 @@
 // Import the emoji utils
 import {
-  encodeEmojis,
   decodeEmojis,
+  encodeEmojis,
   getEmojiPositions,
   storeThoughtWithEmoji
 } from '../utils/emojiUtils'
@@ -71,40 +71,65 @@ const extractHashtags = (message) => {
   return matches.map((tag) => tag.slice(1)) // Remove the # character
 }
 
-const fetchWithTimeout = (url, options, timeout = 30000) => {
-  return Promise.race([
-    fetch(url, options),
-    new Promise((_, reject) =>
-      setTimeout(() => reject(new Error('Request timeout')), timeout)
-    )
-  ])
+/**
+ * Fetch with timeout using AbortController.
+ * @param {string} url
+ * @param {object} options
+ * @param {number} timeoutMs
+ */
+export function fetchWithTimeout(url, options = {}, timeoutMs = 10000) {
+  const controller = new AbortController()
+  const signal = controller.signal
+
+  const timer = setTimeout(() => {
+    controller.abort()
+  }, timeoutMs)
+
+  return fetch(url, { ...options, signal })
+    .then((res) => {
+      clearTimeout(timer)
+      return res
+    })
+    .catch((err) => {
+      clearTimeout(timer)
+      // normalize abort to a timeout error
+      if (err.name === 'AbortError') {
+        throw new Error('Request timeout')
+      }
+      throw err
+    })
 }
 
-// Helper function
-const fetchWithRetry = async (url, options, retries = 3) => {
-  let lastError
-
-  for (let i = 0; i < retries; i++) {
-    try {
-      return await fetchWithTimeout(url, options)
-    } catch (error) {
-      console.log(`API request failed (attempt ${i + 1}/${retries})`, error)
-      lastError = error
-
-      // Only retry on network errors, not HTTP errors
-      if (
-        !error.message.includes('NetworkError') &&
-        !error.message.includes('timeout')
-      ) {
-        throw error
-      }
-
-      // Wait before retrying (with increasing delay)
-      await new Promise((r) => setTimeout(r, 1000 * (i + 1)))
+/**
+ * Fetch + automatic retry on timeout only.
+ * @param {string} url
+ * @param {object} options
+ * @param {number} retries
+ * @param {number} timeoutMs
+ */
+export async function fetchWithRetry(
+  url,
+  options = {},
+  retries = 3,
+  timeoutMs
+) {
+  try {
+    const res = await fetchWithTimeout(url, options, timeoutMs)
+    if (!res.ok) {
+      // parse JSON error if any
+      const body = await res.json().catch(() => ({}))
+      throw new Error(body.message || `HTTP ${res.status}`)
     }
+    return await res.json()
+  } catch (err) {
+    const isTimeout = err.message === 'Request timeout'
+    if (isTimeout && retries > 0) {
+      console.warn(`API request timed out, retrying (${4 - retries}/3)...`)
+      return fetchWithRetry(url, options, retries - 1, timeoutMs)
+    }
+    // rethrow all other errors (or if out of retries)
+    throw err
   }
-
-  throw lastError
 }
 
 // Normalize response function
@@ -185,23 +210,18 @@ export const api = {
   // Get thoughts - NO authentication required
   getThoughts: async (page = 1, limit = 10) => {
     try {
-      const response = await fetchWithRetry(
+      // fetchWithRetry already returns parsed JSON
+      const rawData = await fetchWithRetry(
         `${API_BASE_URL}/thoughts?page=${page}&limit=${limit}`
       )
-
-      if (!response.ok) {
-        throw new Error(`Failed to fetch thoughts: ${response.status}`)
-      }
-
-      const result = await response.json()
-      console.log('API response with potential theme tags:', result)
-      return normalizeResponse(result)
+      console.log('API raw data:', rawData)
+      return normalizeResponse(rawData)
     } catch (error) {
       console.error('API fetch error:', error)
       return {
         success: false,
         data: [],
-        message: error.message
+        message: error.message || 'Failed to fetch thoughts'
       }
     }
   },
@@ -310,23 +330,21 @@ export const api = {
         `${API_BASE_URL}/thoughts/${id}/like`,
         {
           method: 'POST',
-          headers: getAuthHeaders(false) // ← No auth required
+          headers: getAuthHeaders(false)
         }
       )
 
       if (response.status === 503 && retryCount < 3) {
         console.log('API server is starting up. Retrying in 5 seconds...')
-        await new Promise((resolve) => setTimeout(resolve, 5000))
+        await new Promise((r) => setTimeout(r, 5000))
         return api.likeThought(id, retryCount + 1)
       }
 
       if (!response.ok) {
-        const err = await response
-          .json()
-          .catch(() => ({ message: `HTTP ${response.status}` }))
-        throw new Error(err.message || `Failed to like (${response.status})`)
+        throw new Error(`Failed to like thought: ${response.status}`)
       }
-      return response.json()
+
+      return await response.json()
     })
   },
 
@@ -375,12 +393,13 @@ export const api = {
           .catch(() => 'Unknown server error')
         console.error('Server error details:', errorData)
 
-        // Despite the server error, we'll tell the UI the delete succeeded
-        // This provides a better user experience when the server is having issues
+        // Return a more detailed response so the UI can show a notification
         return {
-          success: true, // Return success even though server had an error
+          success: true, // Still return success for UI consistency
           response: null,
-          message: 'Thought was deleted from your view'
+          message:
+            'Thought was removed from your view, but there was an error on the server',
+          serverError: true // Add flag to indicate server issue
         }
       }
 
@@ -445,20 +464,12 @@ export const api = {
     console.log('API: Logging in user:', credentials.username)
 
     try {
-      const response = await fetchWithRetry(`${API_BASE_URL}/users/login`, {
+      // fetchWithRetry now returns parsed JSON or throws on non-OK
+      const data = await fetchWithRetry(`${API_BASE_URL}/users/login`, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(credentials)
       })
-
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}))
-        throw new Error(errorData.message || `Login failed: ${response.status}`)
-      }
-
-      const data = await response.json()
       console.log('Login successful:', data)
       return data
     } catch (error) {

@@ -1,73 +1,117 @@
-import React, { createContext, useContext, useEffect, useState } from 'react'
+import React, {
+  createContext,
+  useCallback,
+  useContext,
+  useEffect,
+  useState
+} from 'react'
 
 import { api } from '../api/api'
-import { useThoughtAuthorization } from '../hooks/useThoughtAuthorization'
+import useThoughtAuthorization from '../hooks/useThoughtAuthorization.js'
 
-export const ThoughtsContext = createContext()
+const ThoughtsContext = createContext()
 
 export const ThoughtsProvider = ({ children }) => {
   const [thoughts, setThoughts] = useState([])
-  const [page, setPage] = useState(1)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState(null)
+  const [currentPage, setCurrentPage] = useState(1)
   const [totalPages, setTotalPages] = useState(1)
-  const [newThoughtId, setNewThoughtId] = useState(null)
+  const [notification, setNotification] = useState(null)
 
   const { getCurrentUserId } = useThoughtAuthorization()
-  const currentUserId = getCurrentUserId()
 
-  // Fetch paginated thoughts
-  const fetchThoughts = async (p = page, force = false) => {
-    setLoading(true)
-    setError(null)
+  const fetchThoughts = useCallback(
+    async (page = 1) => {
+      setLoading(true)
+      setError(null)
+      try {
+        // api.getThoughts returns a normalized response with data and totalPages directly
+        const result = await api.getThoughts(page)
+
+        if (!result.success)
+          throw new Error(result.message || 'Failed to fetch thoughts')
+
+        // Access data directly from the normalized response
+        const me = getCurrentUserId()
+        const sorted = result.data
+          .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
+          .map((t) => ({ ...t, isOwn: t.userId === me }))
+
+        setThoughts(sorted)
+        setCurrentPage(page) // Use the page we requested
+        setTotalPages(result.totalPages) // Get totalPages directly from normalized response
+
+        console.log('Pagination updated:', {
+          currentPage: page,
+          totalPages: result.totalPages
+        })
+      } catch (err) {
+        setError(err.message)
+      } finally {
+        setLoading(false)
+      }
+    },
+    [getCurrentUserId]
+  )
+
+  // Add deleteThought function
+  const deleteThought = async (thoughtId) => {
     try {
-      const { data, totalPages: tp } = await api.getThoughts(p)
-      const enhanced = data.map((t) => ({
-        ...t,
-        isOwn: t.userId === currentUserId
-      }))
-      setThoughts(enhanced)
-      setTotalPages(tp)
-      if (force) setPage(p)
-    } catch (err) {
-      setError(err.message)
-    } finally {
-      setLoading(false)
-    }
-  }
+      const originalThoughts = [...thoughts]
+      setThoughts((prev) => prev.filter((t) => t._id !== thoughtId))
 
-  // Create
-  const createThought = async (message) => {
-    const result = await api.postThought(message)
-    if (result.success) {
-      setNewThoughtId(result.response._id)
-      setThoughts((prev) => [result.response, ...prev])
-      return result
-    }
-    throw new Error(result.message)
-  }
+      const result = await api.deleteThought(thoughtId)
 
-  // Delete
-  const deleteThought = async (id) => {
-    await api.deleteThought(id)
-    setThoughts((prev) => prev.filter((t) => t._id !== id))
-  }
+      if (!result.success) {
+        // Restore the original thoughts if deletion fails
+        setThoughts(originalThoughts)
 
-  // Update
-  const updateThought = async (id, message) => {
-    const result = await api.updateThought(id, message)
-    if (result.success) {
-      setThoughts((prev) =>
-        prev.map((t) => (t._id === id ? { ...t, message } : t))
-      )
-      return result
+        // Show notification
+        setNotification({
+          type: 'error',
+          message: result.message || 'Failed to delete thought'
+        })
+
+        setTimeout(() => setNotification(null), 3000)
+        return false
+      }
+
+      // Check for server errors that were masked as success
+      if (result.serverError) {
+        setNotification({
+          type: 'warning',
+          message: result.message
+        })
+        setTimeout(() => setNotification(null), 3000)
+        return true // Still return true since UI removal was successful
+      }
+
+      // Show success notification
+      setNotification({
+        type: 'success',
+        message: 'Thought successfully deleted!'
+      })
+      setTimeout(() => setNotification(null), 3000)
+
+      return true
+    } catch (error) {
+      console.error('Error deleting thought:', error)
+      setThoughts(originalThoughts) // Restore original thoughts
+
+      setNotification({
+        type: 'error',
+        message:
+          'Could not delete thought. You may only delete your own thoughts.'
+      })
+      setTimeout(() => setNotification(null), 3000)
+      return false
     }
-    throw new Error(result.message)
   }
 
   useEffect(() => {
-    fetchThoughts()
-  }, [page, currentUserId])
+    fetchThoughts(currentPage)
+  }, [currentPage])
 
   return (
     <ThoughtsContext.Provider
@@ -75,14 +119,13 @@ export const ThoughtsProvider = ({ children }) => {
         thoughts,
         loading,
         error,
-        currentPage: page,
+        currentPage,
         totalPages,
-        newThoughtId,
         fetchThoughts,
-        setPage,
-        createThought,
-        deleteThought,
-        updateThought
+        setCurrentPage,
+        deleteThought, // Add this!
+        notification, // Add this!
+        setNotification // Include this to allow clearing notifications
       }}
     >
       {children}
@@ -90,4 +133,8 @@ export const ThoughtsProvider = ({ children }) => {
   )
 }
 
-export const useThoughts = () => useContext(ThoughtsContext)
+export const useThoughts = () => {
+  const ctx = useContext(ThoughtsContext)
+  if (!ctx) throw new Error('useThoughts must be used within ThoughtsProvider')
+  return ctx
+}

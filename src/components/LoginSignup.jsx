@@ -27,10 +27,9 @@ const StyledForm = styled.form`
     padding: 5px;
     border: 2px solid #ccc;
     box-sizing: border-box;
-
     font-size: 14px;
     font-family: 'Roboto Mono', monospace;
-    color: var (--color-text);
+    color: var(--color-text);
     text-align: left;
 
     &:focus {
@@ -73,30 +72,24 @@ const Login = ({ setToken }) => {
 
       if (result.success && result.token) {
         localStorage.setItem('token', result.token)
-
-        // Store full user object if available
         if (result.user) {
           localStorage.setItem('user', JSON.stringify(result.user))
         } else {
-          // Fallback to just username
-          localStorage.setItem(
-            'userInfo',
-            JSON.stringify({ username: username })
-          )
+          localStorage.setItem('userInfo', JSON.stringify({ username }))
         }
-
         setToken(result.token)
       } else {
         setError('Login failed')
       }
-    } catch (error) {
-      setError(error.message || 'Login failed')
+    } catch (err) {
+      setError(err.response?.data?.message || err.message || 'Login failed')
     }
   }
 
   return (
     <StyledForm onSubmit={handleSubmit}>
       <input
+        name='username'
         type='text'
         placeholder='Username'
         value={username}
@@ -104,6 +97,7 @@ const Login = ({ setToken }) => {
         required
       />
       <input
+        name='password'
         type='password'
         placeholder='Password'
         value={password}
@@ -117,46 +111,83 @@ const Login = ({ setToken }) => {
 }
 
 const SignUp = ({ setToken }) => {
-  const [username, setUserName] = useState('')
-  const [password, setPassword] = useState('')
-  const [error, setError] = useState(null)
+  const [formData, setFormData] = useState({
+    username: '',
+    email: '',
+    password: ''
+  })
+  const [errors, setErrors] = useState({})
+
+  const handleChange = (e) => {
+    const { name, value } = e.target
+    setFormData({ ...formData, [name]: value })
+    if (errors[name]) {
+      setErrors({ ...errors, [name]: null })
+    }
+  }
 
   const handleSubmit = async (e) => {
     e.preventDefault()
-    setError(null)
+    setErrors({})
 
     try {
-      const result = await api.signupUser({ username, password })
+      const result = await api.signupUser(formData)
 
       if (result.success && result.token) {
         localStorage.setItem('token', result.token)
         setToken(result.token)
+      } else if (result.errors) {
+        setErrors(result.errors)
       } else {
-        setError('Signup failed')
+        setErrors({ general: 'Signup failed' })
       }
-    } catch (error) {
-      setError(error.message || 'Signup failed')
+    } catch (err) {
+      const resp = err.response?.data
+      if (resp?.errors) {
+        setErrors(resp.errors)
+      } else {
+        setErrors({ general: resp?.message || err.message || 'Signup failed' })
+      }
     }
   }
 
+  const { username, email, password } = formData
+
   return (
     <StyledForm onSubmit={handleSubmit}>
+      {errors.general && <ErrorMessage>{errors.general}</ErrorMessage>}
+
       <input
+        name='username'
         type='text'
         placeholder='Username'
         value={username}
-        onChange={(e) => setUserName(e.target.value)}
+        onChange={handleChange}
         required
       />
+      {errors.username && <ErrorMessage>{errors.username}</ErrorMessage>}
+
       <input
+        name='email'
+        type='email'
+        placeholder='Email'
+        value={email}
+        onChange={handleChange}
+        required
+      />
+      {errors.email && <ErrorMessage>{errors.email}</ErrorMessage>}
+
+      <input
+        name='password'
         type='password'
         placeholder='Password'
         value={password}
-        onChange={(e) => setPassword(e.target.value)}
+        onChange={handleChange}
         required
       />
+      {errors.password && <ErrorMessage>{errors.password}</ErrorMessage>}
+
       <Button type='submit'>Sign Up</Button>
-      {error && <ErrorMessage>{error}</ErrorMessage>}
     </StyledForm>
   )
 }

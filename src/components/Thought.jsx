@@ -108,11 +108,12 @@ export const Thought = ({
   userId, // This is the thought creator's ID
   username,
   isAnonymous = true,
+  isOwn = false, // ← accept the flag
   onDelete,
   onUpdate
 }) => {
   const { isLiked, likeCount, handleLike } = useLikeSystem(_id, initialHearts)
-  const { getCurrentUserId } = useThoughtAuthorization()
+  const { getCurrentUserId, isOwnThought } = useThoughtAuthorization(userId)
 
   // Get current user ID to compare with thought owner
   const currentUserId = getCurrentUserId()
@@ -121,14 +122,14 @@ export const Thought = ({
   const allTags = [...tags, ...themeTags]
 
   // Check if user owns this thought (can edit/delete)
-  const isOwnThought = userId && currentUserId && userId === currentUserId
+  const canEdit = isOwn || (userId && currentUserId && userId === currentUserId)
 
   // Log for debugging
   console.log(
     `Thought ${_id?.substring(
       0,
       8
-    )}: userId=${userId}, currentUser=${currentUserId}, isOwn=${isOwnThought}`
+    )}: userId=${userId}, currentUser=${currentUserId}, isOwn=${canEdit}`
   )
   console.log(`Thought ${_id?.substring(0, 8)}: tags=`, tags)
 
@@ -179,23 +180,21 @@ export const Thought = ({
       <MessageSection>{displayMessage}</MessageSection>
 
       <BottomSection>
-        <ActionRow>
-          {isOwnThought && (
-            <ActionRow>
-              <Button variant='danger' onClick={handleDelete} text='Delete' />
-              <Button variant='authed' onClick={handleUpdate} text='Update' />
-            </ActionRow>
-          )}
-          <LikeCounterStyled>
-            <p>{`${displayLikeCount} x`}</p>
-            <Button
-              variant='icon'
-              icon={'❤️'}
-              onClick={handleLike}
-              $isLiked={isLiked}
-            />
-          </LikeCounterStyled>
-        </ActionRow>
+        {canEdit && (
+          <ActionRow>
+            <Button variant='danger' onClick={handleDelete} text='Delete' />
+            <Button variant='authed' onClick={handleUpdate} text='Update' />
+          </ActionRow>
+        )}
+        <LikeCounterStyled>
+          <p>{`${displayLikeCount} x`}</p>
+          <Button
+            variant='icon'
+            icon={'❤️'}
+            onClick={handleLike}
+            $isLiked={isLiked}
+          />
+        </LikeCounterStyled>
       </BottomSection>
       <StyledUserName>{isAnonymous ? 'Anonymous' : username}</StyledUserName>
     </ThoughtContainer>

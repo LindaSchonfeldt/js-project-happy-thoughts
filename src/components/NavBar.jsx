@@ -1,8 +1,8 @@
+import { Link, useNavigate } from 'react-router-dom'
 import styled from 'styled-components'
-import { useNavigate, Link } from 'react-router-dom'
+
 import { Button } from './Button'
 import { LogoutButton } from './LogoutButton'
-import { api } from '../api/api'
 
 const NavContainer = styled.nav`
   display: flex;
@@ -10,6 +10,13 @@ const NavContainer = styled.nav`
   align-items: center;
   padding: 0 20px;
   height: 60px;
+
+  @media (max-width: 600px) {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 10px;
+    margin-bottom: 20px;
+  }
 `
 
 const Logo = styled.h1`

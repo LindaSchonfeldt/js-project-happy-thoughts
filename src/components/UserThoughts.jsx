@@ -1,9 +1,10 @@
 import React from 'react'
-import { useThoughts } from '../contexts/ThoughtsContext'
-import { Thought } from './Thought'
-import styled from 'styled-components'
 import { useNavigate } from 'react-router-dom'
+import styled from 'styled-components'
+
+import { useThoughts } from '../contexts/ThoughtsContext'
 import { Loader } from './Loader'
+import { Thought } from './Thought'
 
 const UserThoughtsContainer = styled.div`
   max-width: 800px;
@@ -11,20 +12,9 @@ const UserThoughtsContainer = styled.div`
   padding: 20px;
 `
 
-const BackButton = styled.button`
-  margin-bottom: 20px;
-  padding: 8px 16px;
-  background-color: #f8f8f8;
-  border: 1px solid #ddd;
-  border-radius: 4px;
-  cursor: pointer;
-
-  &:hover {
-    background-color: #eaeaea;
-  }
-`
-
 const Header = styled.h1`
+  font-family: 'Roboto Mono', monospace;
+  font-size: 24px;
   text-align: center;
   margin-bottom: 20px;
 `
@@ -87,9 +77,6 @@ export const UserThoughts = () => {
 
   return (
     <UserThoughtsContainer>
-      <BackButton onClick={() => navigate('/')}>
-        Back to All Thoughts
-      </BackButton>
       <Header>My Thoughts</Header>
 
       {error ? (

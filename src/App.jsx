@@ -5,6 +5,7 @@ import { LikedThoughts } from './components/LikedThoughts'
 import { Loader } from './components/Loader'
 import { LoginSignup } from './components/LoginSignup'
 import { NavBar } from './components/NavBar'
+import { Notification } from './components/Notification'
 import { Pagination } from './components/Pagination'
 import { ServiceStatus } from './components/ServiceStatus'
 import ThoughtForm from './components/ThoughtForm'
@@ -22,18 +23,21 @@ export const App = () => {
   const [updatingThought, setUpdatingThought] = useState(null)
   const [serverStarting, setServerStarting] = useState(false)
 
+  // IMPORTANT: Destructure ALL these values from context
   const {
     thoughts,
     loading,
     error,
     currentPage,
     totalPages,
+    setCurrentPage,
     newThoughtId,
     createThought,
     deleteThought,
     updateThought,
     fetchThoughts,
-    setPage
+    notification,
+    setNotification // Add this line to fix the error
   } = useThoughts()
 
   // Opens the update modal when a thought is selected for editing
@@ -85,9 +89,14 @@ export const App = () => {
     }
   }, [token])
 
-  // Extract current user ID, trying multiple common field names
   const currentUserId = user?.userId || user?.id || user?._id
-  console.log('Current user ID:', currentUserId)
+
+  // Only log when the user object changes
+  useEffect(() => {
+    if (currentUserId) {
+      console.log('Current user ID:', currentUserId)
+    }
+  }, [currentUserId])
 
   const handleLogout = () => {
     localStorage.removeItem('token')
@@ -152,6 +161,8 @@ export const App = () => {
     )
   }
 
+  console.log('Debug pagination:', { currentPage, totalPages }) // Add this debug line
+
   // Always show main app (no login gate!)
   return (
     <Router basename='/'>
@@ -183,6 +194,15 @@ export const App = () => {
           isLoading={loading && !serverStarting}
           onRetry={() => fetchThoughts(currentPage)}
         />
+
+        {/* Show the notification if it exists */}
+        {notification && (
+          <Notification
+            type={notification.type}
+            message={notification.message}
+            onClose={() => setNotification(null)}
+          />
+        )}
 
         <Routes>
           <Route
@@ -218,22 +238,8 @@ export const App = () => {
           <Pagination
             currentPage={currentPage}
             totalPages={totalPages}
-            onPageChange={setPage}
+            onPageChange={setCurrentPage}
           />
-        )}
-
-        {serverStarting && (
-          <div
-            style={{
-              textAlign: 'center',
-              padding: '20px',
-              backgroundColor: '#f0f0f0',
-              margin: '20px',
-              borderRadius: '8px'
-            }}
-          >
-            Our server is waking up... This may take 30-60 seconds.
-          </div>
         )}
       </div>
     </Router>

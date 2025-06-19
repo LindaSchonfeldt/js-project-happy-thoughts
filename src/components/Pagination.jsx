@@ -1,56 +1,46 @@
+import React from 'react'
 import styled from 'styled-components'
 
-const StyledPagination = styled.div`
+const PaginationContainer = styled.div`
   display: flex;
   justify-content: center;
-  align-items: center;
-  margin-top: 20px;
   gap: 10px;
+  margin: 20px 0;
 `
 
 const PageButton = styled.button`
-  padding: 8px 12px;
-  background-color: #f0f0f0;
+  font-family: 'Roboto Mono', monospace;
+  font-size: 14px;
+  padding: 5px 10px;
   border: 1px solid #ccc;
-  border-radius: 4px;
+  background: ${(props) => (props.active ? '#f0f0f0' : 'white')};
   cursor: pointer;
-
-  &:hover {
-    background-color: #e0e0e0;
-  }
-
-  &:disabled {
-    opacity: 0.5;
-    cursor: not-allowed;
-  }
 `
 
 export const Pagination = ({ currentPage, totalPages, onPageChange }) => {
-  const handlePrevious = () => {
-    if (currentPage > 1) {
-      console.log('Going to previous page:', currentPage - 1)
-      onPageChange(currentPage - 1)
-    }
-  }
+  console.log('Pagination props:', { currentPage, totalPages }) // Debug log
 
-  const handleNext = () => {
-    if (currentPage < totalPages) {
-      console.log('Going to next page:', currentPage + 1)
-      onPageChange(currentPage + 1)
-    }
-  }
+  if (!totalPages || totalPages <= 1) return null
 
   return (
-    <StyledPagination>
-      <PageButton onClick={handlePrevious} disabled={currentPage === 1}>
-        ◀
+    <PaginationContainer>
+      <PageButton
+        onClick={() => onPageChange(Math.max(1, currentPage - 1))}
+        disabled={currentPage === 1}
+      >
+        Previous
       </PageButton>
+
       <span>
         Page {currentPage} of {totalPages}
       </span>
-      <PageButton onClick={handleNext} disabled={currentPage === totalPages}>
-        ▶
+
+      <PageButton
+        onClick={() => onPageChange(Math.min(totalPages, currentPage + 1))}
+        disabled={currentPage === totalPages}
+      >
+        Next
       </PageButton>
-    </StyledPagination>
+    </PaginationContainer>
   )
 }
