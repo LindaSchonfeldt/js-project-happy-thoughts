@@ -1,6 +1,3 @@
-// Import the emoji utils
-import { decodeEmojis, encodeEmojis, getEmojiPositions, storeThoughtWithEmoji } from '../utils/emojiUtils'
-
 // Export API_BASE_URL for backward compatibility
 export const API_BASE_URL = import.meta.env.VITE_API_BASE_URL
 
@@ -72,27 +69,13 @@ const extractHashtags = (message) => {
  * @param {object} options
  * @param {number} timeoutMs
  */
-export function fetchWithTimeout(url, options = {}, timeoutMs = 10000) {
+export function fetchWithTimeout(url, options = {}, timeoutMs = 20000) {
   const controller = new AbortController()
-  const signal = controller.signal
+  const timeoutId = setTimeout(() => controller.abort(), timeoutMs)
 
-  const timer = setTimeout(() => {
-    controller.abort()
-  }, timeoutMs)
-
-  return fetch(url, { ...options, signal })
-    .then((res) => {
-      clearTimeout(timer)
-      return res
-    })
-    .catch((err) => {
-      clearTimeout(timer)
-      // normalize abort to a timeout error
-      if (err.name === 'AbortError') {
-        throw new Error('Request timeout')
-      }
-      throw err
-    })
+  return fetch(url, { ...options, signal: controller.signal }).finally(() =>
+    clearTimeout(timeoutId)
+  )
 }
 
 /**
@@ -105,26 +88,48 @@ export function fetchWithTimeout(url, options = {}, timeoutMs = 10000) {
 export async function fetchWithRetry(
   url,
   options = {},
-  retries = 3,
-  timeoutMs
+  retries = 5,
+  timeoutMs = 20000
 ) {
-  try {
-    const res = await fetchWithTimeout(url, options, timeoutMs)
-    if (!res.ok) {
-      // parse JSON error if any
-      const body = await res.json().catch(() => ({}))
-      throw new Error(body.message || `HTTP ${res.status}`)
+  let lastError
+
+  for (let attempt = 1; attempt <= retries; attempt++) {
+    try {
+      console.log(`API request attempt ${attempt}/${retries}: ${url}`)
+      const response = await fetchWithTimeout(url, options, timeoutMs)
+
+      // Check if response is ok before parsing
+      if (!response.ok) {
+        const errorText = await response.text()
+        throw new Error(`HTTP error ${response.status}: ${errorText}`)
+      }
+
+      // Parse the response as JSON before returning it
+      return await response.json()
+    } catch (error) {
+      lastError = error
+
+      // Only retry on timeout or network errors, not on 4xx/5xx responses
+      if (error.name === 'AbortError' || error.message.includes('timeout')) {
+        console.log(
+          `API request failed (attempt ${attempt}/${retries}): ${error.message}`
+        )
+
+        // Add exponential backoff with jitter
+        const delay = Math.min(
+          1000 * Math.pow(2, attempt) + Math.random() * 1000,
+          10000
+        )
+        await new Promise((resolve) => setTimeout(resolve, delay))
+        continue
+      }
+
+      // Don't retry for client or server errors
+      throw error
     }
-    return await res.json()
-  } catch (err) {
-    const isTimeout = err.message === 'Request timeout'
-    if (isTimeout && retries > 0) {
-      console.warn(`API request timed out, retrying (${4 - retries}/3)...`)
-      return fetchWithRetry(url, options, retries - 1, timeoutMs)
-    }
-    // rethrow all other errors (or if out of retries)
-    throw err
   }
+
+  throw lastError
 }
 
 // Normalize response function
@@ -303,7 +308,7 @@ export const api = {
       try {
         // Log what we're about to do
         console.log(`Making POST request to like thought: ${id}`)
-        
+
         // Make the API call - fetchWithRetry returns parsed JSON, not Response object
         const result = await fetchWithRetry(
           `${API_BASE_URL}/thoughts/${id}/like`,
@@ -314,7 +319,7 @@ export const api = {
         )
 
         console.log('Parsed like response:', result)
-        
+
         // If result has a success property that's true, return it directly
         if (result && result.success === true) {
           return {
@@ -323,8 +328,8 @@ export const api = {
             message: result.message || 'Like successful'
           }
         }
-        
-        // If the result indicates failure but we made it this far, 
+
+        // If the result indicates failure but we made it this far,
         // return a success anyway since the API call went through
         return {
           success: true,
@@ -334,7 +339,7 @@ export const api = {
       } catch (error) {
         // This catches network errors or any uncaught exceptions
         console.error('Caught error in likeThought:', error)
-        
+
         // Return a failure object that won't cause further errors
         return {
           success: false,
@@ -405,7 +410,12 @@ export const api = {
       }
 
       if (!response.ok) {
-        throw new Error(`Failed to delete thought: ${response.status}`)
+        const status = response.status || 'unknown'
+        return {
+          success: false,
+          response: null,
+          message: `Failed to delete thought (Status: ${status})`
+        }
       }
 
       // Check if there's content to parse as JSON
@@ -431,52 +441,59 @@ export const api = {
     } catch (error) {
       console.error('Error deleting thought:', error)
 
-      // For network errors or other issues, still remove from UI
+      // FIX: Return a failure response instead of success for better error handling
       return {
-        success: true, // Return success to update UI
+        success: false,
         response: null,
-        message:
-          'Thought was removed from your view, but there might be a sync issue'
+        message: error.message || 'Network error while deleting thought'
       }
     }
   },
 
   // Update an existing thought
-  updateThought: async (thoughtId, message) => {
+  updateThought: async (thoughtId, updatedData) => {
     try {
-      // Get token from localStorage
+      // ← ADD THIS
       const token = localStorage.getItem('token')
-
       if (!token) {
-        throw new Error('You must be logged in to update thoughts')
+        return { success: false, message: 'Not authenticated' }
       }
 
-      const response = await fetchWithRetry(
+      const headers = {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${token}`
+      }
+
+      const formattedData = {
+        message: updatedData.message || '',
+        tags: updatedData.tags || ['general'],
+        preserveTags: updatedData.preserveTags === true
+      }
+
+      console.log('Sending unmodified data to API:', {
+        thoughtId,
+        data: formattedData
+      })
+      const result = await fetchWithRetry(
         `${API_BASE_URL}/thoughts/${thoughtId}`,
         {
           method: 'PUT',
-          headers: {
-            'Content-Type': 'application/json',
-            Authorization: `Bearer ${token}`
-          },
-          body: JSON.stringify({ message })
+          headers,
+          body: JSON.stringify(formattedData)
         }
       )
 
-      if (response.status === 401) {
-        // Token expired or invalid
-        localStorage.removeItem('token') // Clear token
-        throw new Error('Your session has expired. Please log in again')
+      return {
+        success: true,
+        response: result.response || result.data || result,
+        message: 'Thought updated successfully'
       }
-
-      if (!response.ok) {
-        throw new Error(`Failed to update thought: ${response.status}`)
-      }
-
-      return await response.json()
     } catch (error) {
-      console.error('Error updating thought:', error)
-      throw error
+      console.error('Error in update request:', error)
+      return {
+        success: false,
+        message: error.message || 'Failed to update thought'
+      }
     }
   },
 
@@ -502,7 +519,8 @@ export const api = {
     console.log('API: Signing up user:', userData.username)
 
     try {
-      const response = await fetchWithRetry(`${API_BASE_URL}/users/signup`, {
+      // fetchWithRetry already returns the parsed JSON response
+      const result = await fetchWithRetry(`${API_BASE_URL}/users/signup`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'
@@ -510,19 +528,53 @@ export const api = {
         body: JSON.stringify(userData)
       })
 
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}))
-        throw new Error(
-          errorData.message || `Signup failed: ${response.status}`
-        )
-      }
+      console.log('Signup successful:', result)
 
-      const data = await response.json()
-      console.log('Signup successful:', data)
-      return data
+      // Just return the result, which is already parsed JSON
+      return {
+        success: result.success === true,
+        token: result.token,
+        user: result.user,
+        message: result.message || 'Signup successful'
+      }
     } catch (error) {
       console.error('Signup error:', error)
-      throw error
+
+      // Try to parse error message if it's in JSON format
+      let errorMessage = error.message || 'An unexpected error occurred'
+      let errorDetails = {}
+
+      // Check if the error contains a JSON string from the API
+      if (error.message && error.message.includes('HTTP error')) {
+        try {
+          // Extract the JSON part from the error message
+          const jsonStart = error.message.indexOf('{')
+          if (jsonStart !== -1) {
+            const jsonString = error.message.substring(jsonStart)
+            const parsedError = JSON.parse(jsonString)
+
+            // Get the user-friendly message
+            errorMessage =
+              parsedError.message || parsedError.response || errorMessage
+
+            // Extract validation details if available
+            if (parsedError.details) {
+              errorDetails = parsedError.details
+            }
+          }
+        } catch (parseError) {
+          console.error('Error parsing error response:', parseError)
+        }
+      }
+
+      // Return a structured error response instead of throwing
+      return {
+        success: false,
+        token: null,
+        user: null,
+        message: errorMessage,
+        errors: errorDetails
+      }
     }
   },
 

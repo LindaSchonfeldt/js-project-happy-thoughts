@@ -38,8 +38,9 @@ export const StyledButton = styled.button`
   ${(props) =>
     (props.$variant === 'text' || !props.$variant) &&
     `
-    border-radius: 16px;
+    border-radius: 0px;
     padding: 10px 20px;
+    margin-top: 10px;
     min-width: 120px;
     
     &:hover {

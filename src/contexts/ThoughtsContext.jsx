@@ -34,7 +34,7 @@ const getCurrentUserIdFromToken = () => {
 
 const ThoughtsContext = createContext()
 
-export const ThoughtsProvider = ({ children }) => {
+const ThoughtsProvider = ({ children }) => {
   const [thoughts, setThoughts] = useState([])
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState(null)
@@ -176,43 +176,65 @@ export const ThoughtsProvider = ({ children }) => {
     }
   }
 
-  // First, add the updateThought function definition if not already there
-  const updateThought = async (thoughtId, message) => {
+  // Find your updateThought function and update it:
+
+  const updateThought = async (thoughtId, updatedData) => {
     try {
-      const result = await api.updateThought(thoughtId, message)
+      // Optimistically update UI immediately
+      setThoughts((currentThoughts) =>
+        currentThoughts.map((thought) =>
+          thought._id === thoughtId
+            ? { ...thought, message: updatedData.message }
+            : thought
+        )
+      )
+
+      // Show a temporary notification
+      setNotification({
+        type: 'info',
+        message: 'Updating thought...'
+      })
+
+      // Call the API to persist the change
+      const result = await api.updateThought(thoughtId, updatedData)
 
       if (result.success) {
-        // Update the thought in the list
-        setThoughts((prev) =>
-          prev.map((thought) =>
-            thought._id === thoughtId ? { ...thought, message } : thought
-          )
-        )
-
-        // Show success notification
+        // Update was successful
         setNotification({
           type: 'success',
-          message: 'Thought updated successfully!'
+          message: 'Thought updated successfully'
         })
-        setTimeout(() => setNotification(null), 3000)
 
-        return result
+        // Refresh thoughts list to ensure everything is in sync
+        // But this is optional since we already updated the UI optimistically
+        fetchThoughts(currentPage)
+
+        return { success: true }
       } else {
+        // API call failed but UI is already updated
+        console.error('API failed to update thought:', result.message)
+
         setNotification({
-          type: 'error',
-          message: result.message || 'Failed to update thought'
+          type: 'warning',
+          message:
+            'Thought updated locally, but server update failed. Changes may not persist.'
         })
-        setTimeout(() => setNotification(null), 3000)
-        return result
+
+        return {
+          success: true,
+          localOnly: true,
+          serverError: result.message
+        }
       }
     } catch (error) {
       console.error('Error updating thought:', error)
+
       setNotification({
         type: 'error',
-        message: 'Could not update thought'
+        message: 'Failed to update thought. Please try again.'
       })
-      setTimeout(() => setNotification(null), 3000)
-      throw error
+
+      return { success: false, error }
     }
   }
 
@@ -243,8 +265,12 @@ export const ThoughtsProvider = ({ children }) => {
   )
 }
 
-export const useThoughts = () => {
-  const ctx = useContext(ThoughtsContext)
-  if (!ctx) throw new Error('useThoughts must be used within ThoughtsProvider')
-  return ctx
+const useThoughts = () => {
+  const context = useContext(ThoughtsContext)
+  if (!context) {
+    throw new Error('useThoughts must be used within ThoughtsProvider')
+  }
+  return context
 }
+
+export { ThoughtsProvider, useThoughts }

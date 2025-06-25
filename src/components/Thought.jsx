@@ -1,13 +1,12 @@
-import React, { useState } from 'react'
 import styled, { keyframes } from 'styled-components'
+import React from 'react'
 
 import { useLikeSystem } from '../hooks/useLikeSystem'
 import { useThoughtAuthorization } from '../hooks/useThoughtAuthorization'
 import { media } from '../media'
 import { formatDate } from '../utils/dateHelpers'
-import { getThoughtWithEmoji, restoreEmoji } from '../utils/emojiUtils'
 import { Button } from './Button'
-import TagList from './TagList'
+import { TagList } from './TagList'
 
 const fadeIn = keyframes`
   from {
@@ -113,31 +112,72 @@ export const Thought = ({
   onUpdate
 }) => {
   const { isLiked, likeCount, handleLike } = useLikeSystem(_id, initialHearts)
-  const { getCurrentUserId, isOwnThought } = useThoughtAuthorization(userId)
+  const {
+    currentUser,
+    canEdit: hookCanEdit,
+    isOwn: hookIsOwn
+  } = useThoughtAuthorization(userId)
 
   // Get current user ID to compare with thought owner
-  const currentUserId = getCurrentUserId()
+  const currentUserId = currentUser
 
-  // Merge both arrays
-  const allTags = [...tags, ...themeTags]
+  const isSessionOwner = React.useMemo(() => {
+    // Check if this thought ID is in the session storage list of thoughts created by this user
+    const sessionThoughts = JSON.parse(
+      sessionStorage.getItem('myCreatedThoughts') || '[]'
+    )
+    return sessionThoughts.includes(_id)
+  }, [_id])
 
-  // Check if user owns this thought (can edit/delete)
-  const canEdit = isOwn || (userId && currentUserId && userId === currentUserId)
+  // Update the canEdit check:
+  const canEdit = Boolean(
+    // Case 1: Specific user-owned thoughts (non-anonymous)
+    (userId && currentUserId && userId === currentUserId) ||
+      // Case 2: Session-owned anonymous thoughts
+      (isAnonymous === true && isSessionOwner) ||
+      // Case 3: Legacy support for isOwn flag
+      isOwn === true ||
+      hookIsOwn === true
+  )
 
-  // Log for debugging
+  // Log for debugging - include more clear ownership information
   console.log(
     `Thought ${_id?.substring(
       0,
       8
-    )}: userId=${userId}, currentUser=${currentUserId}, isOwn=${canEdit}`
+    )}: userId=${userId}, currentUser=${currentUserId}, ` +
+      `can edit=${canEdit}, isOwn=${isOwn}`
   )
   console.log(`Thought ${_id?.substring(0, 8)}: tags=`, tags)
 
-  // Extract tags from message if none provided
-  const extractedTags =
-    tags && tags.length > 0 ? tags : message.match(/#[\w]+/g) || []
+  const extractHashtags = (messageText) => {
+    if (!messageText || typeof messageText !== 'string') return []
 
-  console.log(`Thought ${_id?.substring(0, 8)}: extracted tags=`, extractedTags)
+    // Extract hashtags from message content
+    const hashtagRegex = /#(\w+)/g
+    const matches = messageText.match(hashtagRegex)
+
+    if (!matches) return []
+    // Remove the # character
+    return matches.map((tag) => tag.slice(1))
+  }
+
+  // Add this before the return statement
+  const displayMessage =
+    typeof message === 'object'
+      ? message.message || 'No message content'
+      : message
+
+  // Extract hashtags from message content as fallback
+  const extractedTags = extractHashtags(displayMessage)
+
+  // Log some debug info to help diagnose
+  console.log('Thought tags:', {
+    thoughtId: _id?.substring(0, 8),
+    providedTags: tags,
+    extractedTags,
+    willDisplay: tags?.length ? tags : extractedTags
+  })
 
   const handleUpdate = () => {
     if (onUpdate) {
@@ -165,19 +205,27 @@ export const Thought = ({
   const formattedDate = formatDate(createdAt)
   const displayLikeCount =
     typeof likeCount === 'object' ? likeCount.hearts || 0 : likeCount
-  const displayMessage =
+  const displayMessageFinal =
     typeof message === 'object'
       ? message.message || 'No message content'
       : message
 
+  // Add this debug code to help troubleshoot
+  console.log('Rendering thought with tags:', {
+    id: _id?.substring(0, 8),
+    tags,
+    tagsType: typeof tags,
+    isArray: Array.isArray(tags)
+  })
+
   return (
     <ThoughtContainer $isNew={isNew}>
       <TopSection>
-        <TagList tags={allTags} />
+        <TagList tags={tags?.length ? tags : extractedTags} />
         <TimeStamp>{formattedDate}</TimeStamp>
       </TopSection>
 
-      <MessageSection>{displayMessage}</MessageSection>
+      <MessageSection>{displayMessageFinal}</MessageSection>
 
       <BottomSection>
         {canEdit && (

@@ -39,5 +39,3 @@ export const TagList = ({ tags = [] }) => {
     </StyledTags>
   )
 }
-
-export default TagList

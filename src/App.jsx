@@ -1,5 +1,10 @@
 import React, { useEffect, useState } from 'react'
-import { Route, BrowserRouter as Router, Routes, useLocation } from 'react-router-dom'
+import {
+  Route,
+  BrowserRouter as Router,
+  Routes,
+  useLocation
+} from 'react-router-dom'
 
 import { LikedThoughts } from './components/LikedThoughts'
 import { Loader } from './components/Loader'
@@ -22,6 +27,11 @@ export const App = () => {
   const [isUpdateModalOpen, setIsUpdateModalOpen] = useState(false)
   const [updatingThought, setUpdatingThought] = useState(null)
   const [serverStarting, setServerStarting] = useState(false)
+  const [apiStartupState, setApiStartupState] = useState({
+    isStarting: true,
+    startTime: Date.now(),
+    retryCount: 0
+  })
 
   // IMPORTANT: Destructure ALL these values from context
   const {
@@ -53,9 +63,13 @@ export const App = () => {
   }
 
   // Saves the updated thought when modal form is submitted
-  const handleSaveThoughtUpdate = async (id, updatedMessage) => {
+  const handleSaveThoughtUpdate = async (id, updatedData) => {
     try {
-      await updateThought(id, updatedMessage)
+      // Handle both formats - if updatedData is a string or an object
+      const dataToUpdate =
+        typeof updatedData === 'string' ? { message: updatedData } : updatedData
+
+      await updateThought(id, dataToUpdate)
       setIsUpdateModalOpen(false)
       setUpdatingThought(null)
     } catch (error) {
@@ -108,28 +122,55 @@ export const App = () => {
   useEffect(() => {
     const checkServerStatus = async () => {
       try {
-        setServerStarting(true)
+        setApiStartupState((prev) => ({
+          ...prev,
+          isStarting: true,
+          retryCount: prev.retryCount + 1
+        }))
+
         const response = await fetch(
-          'https://happy-thoughts-api-yn3p.onrender.com/health'
+          'https://happy-thoughts-api-yn3p.onrender.com/health',
+          { timeout: 5000 }
         )
+
         if (response.ok) {
-          setServerStarting(false)
+          setApiStartupState((prev) => ({
+            ...prev,
+            isStarting: false
+          }))
         }
       } catch (error) {
-        console.log('Server may be starting up:', error)
-        setServerStarting(true)
+        console.log('API server cold start detected:', error)
+
+        // Only keep checking for a reasonable amount of time (2 minutes)
+        const elapsedTime = Date.now() - apiStartupState.startTime
+        if (elapsedTime < 120000) {
+          setTimeout(checkServerStatus, 5000)
+        } else {
+          // Give up after 2 minutes
+          setApiStartupState((prev) => ({
+            ...prev,
+            isStarting: false,
+            timedOut: true
+          }))
+        }
       }
     }
 
     checkServerStatus()
-
-    // Check again after 10 seconds
-    const timer = setTimeout(() => {
-      setServerStarting(false)
-    }, 10000)
-
-    return () => clearTimeout(timer)
   }, [])
+
+  // Add a clear message for users during API cold starts
+  if (apiStartupState.isStarting) {
+    return (
+      <Loader
+        message={`The API server is starting up. This may take up to 60 seconds for free-tier hosting. (Attempt ${apiStartupState.retryCount})`}
+        showTimedMessage={true}
+        loadingTime={10000}
+        timedMessage='This is taking longer than usual. Free-tier servers can take up to 60 seconds to start...'
+      />
+    )
+  }
 
   // Show loader while loading
   if (loading) {

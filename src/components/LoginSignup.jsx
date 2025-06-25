@@ -58,6 +58,21 @@ const ErrorMessage = styled.p`
   text-align: center;
 `
 
+const SwitchButton = styled.button`
+  background: none;
+  border: none;
+  color: #2196f3;
+  font-weight: 600;
+  cursor: pointer;
+  padding: 5px 0;
+  margin-top: 5px;
+  text-decoration: underline;
+
+  &:hover {
+    color: #0d47a1;
+  }
+`
+
 const Login = ({ setToken }) => {
   const [username, setUserName] = useState('')
   const [password, setPassword] = useState('')
@@ -110,13 +125,14 @@ const Login = ({ setToken }) => {
   )
 }
 
-const SignUp = ({ setToken }) => {
+const SignUp = ({ setToken, setIsLogin }) => {
   const [formData, setFormData] = useState({
     username: '',
     email: '',
     password: ''
   })
   const [errors, setErrors] = useState({})
+  const [error, setError] = useState(null) // Add this line
 
   const handleChange = (e) => {
     const { name, value } = e.target
@@ -126,12 +142,33 @@ const SignUp = ({ setToken }) => {
     }
   }
 
+  const handleSignupResponse = (response) => {
+    if (!response.success) {
+      // Check if the error is about existing username
+      if (response.message && response.message.includes('already exists')) {
+        // Show specific error with login suggestion
+        setError(`${response.message}. Try logging in instead.`)
+        // Optionally, automatically switch to login form
+        setIsLogin(true)
+      } else {
+        // Show regular error
+        setError(response.message || 'Signup failed. Please try again.')
+      }
+      return false
+    }
+    return true
+  }
+
   const handleSubmit = async (e) => {
     e.preventDefault()
     setErrors({})
 
     try {
       const result = await api.signupUser(formData)
+
+      if (!handleSignupResponse(result)) {
+        return // Stop execution if there was an error
+      }
 
       if (result.success && result.token) {
         localStorage.setItem('token', result.token)
@@ -151,11 +188,23 @@ const SignUp = ({ setToken }) => {
     }
   }
 
-  const { username, email, password } = formData
+  const { username, password } = formData
 
   return (
     <StyledForm onSubmit={handleSubmit}>
       {errors.general && <ErrorMessage>{errors.general}</ErrorMessage>}
+
+      {/* Add the enhanced error message */}
+      {error && (
+        <ErrorMessage>
+          {error}
+          {error.includes('already exists') && (
+            <SwitchButton onClick={() => setIsLogin(true)} type='button'>
+              Switch to Login
+            </SwitchButton>
+          )}
+        </ErrorMessage>
+      )}
 
       <input
         name='username'
@@ -166,16 +215,6 @@ const SignUp = ({ setToken }) => {
         required
       />
       {errors.username && <ErrorMessage>{errors.username}</ErrorMessage>}
-
-      <input
-        name='email'
-        type='email'
-        placeholder='Email'
-        value={email}
-        onChange={handleChange}
-        required
-      />
-      {errors.email && <ErrorMessage>{errors.email}</ErrorMessage>}
 
       <input
         name='password'
@@ -197,7 +236,11 @@ export const LoginSignup = ({ setToken }) => {
 
   return (
     <StyledLoginSignup>
-      {isLogin ? <Login setToken={setToken} /> : <SignUp setToken={setToken} />}
+      {isLogin ? (
+        <Login setToken={setToken} />
+      ) : (
+        <SignUp setToken={setToken} setIsLogin={setIsLogin} />
+      )}
 
       <ToggleText onClick={() => setIsLogin(!isLogin)}>
         {isLogin

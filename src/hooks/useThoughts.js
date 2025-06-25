@@ -67,6 +67,9 @@ export const useThoughts = () => {
         setNewThoughtId(newThought._id)
         console.log('New thought ID set:', newThought._id)
 
+        // Save the thought ID to session storage to track ownership
+        saveThoughtToSession(newThought._id)
+
         // Add the new thought to the TOP of the existing list
         setThoughts((prevThoughts) => [newThought, ...prevThoughts])
 
@@ -114,23 +117,45 @@ export const useThoughts = () => {
     }
   }
 
-  const updateThought = async (thoughtId, newMessage) => {
+  const updateThought = async (thoughtId, updatedData) => {
     try {
-      const result = await api.updateThought(thoughtId, newMessage)
+      console.log('Updating thought with data:', updatedData)
+
+      // Ensure data format is correct - the API may be expecting a specific format
+      const formattedData = {
+        message: updatedData.message,
+        // If tags is an array, keep it; otherwise, make it an empty array
+        tags: Array.isArray(updatedData.tags) ? updatedData.tags : []
+        // Don't include user-related fields or system fields in the update
+        // as these should not be modifiable
+      }
+
+      // Add debug logging
+      console.log('Formatted update data:', formattedData)
+
+      const result = await api.updateThought(thoughtId, formattedData)
 
       if (result.success) {
-        // Update the thought in the list
+        // Update thoughts in state
         setThoughts((prevThoughts) =>
           prevThoughts.map((thought) =>
             thought._id === thoughtId
-              ? { ...thought, message: newMessage }
+              ? { ...thought, ...formattedData }
               : thought
           )
         )
+
+        return { success: true, thought: result.response }
+      } else {
+        console.error('Failed to update thought:', result.message)
+        return { success: false, message: result.message }
       }
     } catch (error) {
       console.error('Error updating thought:', error)
-      setError('Failed to update thought')
+      return {
+        success: false,
+        message: error.message || 'An error occurred while updating the thought'
+      }
     }
   }
 
@@ -159,6 +184,18 @@ export const useThoughts = () => {
     } catch (error) {
       console.error('Error decoding token:', error)
       return null
+    }
+  }
+
+  const saveThoughtToSession = (thoughtId) => {
+    const existing = JSON.parse(
+      sessionStorage.getItem('myCreatedThoughts') || '[]'
+    )
+    if (!existing.includes(thoughtId)) {
+      sessionStorage.setItem(
+        'myCreatedThoughts',
+        JSON.stringify([...existing, thoughtId])
+      )
     }
   }
 
