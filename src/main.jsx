@@ -1,15 +1,16 @@
 import React from 'react'
 import ReactDOM from 'react-dom/client'
-import { App } from './App.jsx'
+import { App } from './App'
 import { ThoughtsProvider } from './contexts/ThoughtsContext'
-import ErrorBoundary from './components/ErrorBoundary'
+import { UserProvider } from './contexts/UserContext'
 
-ReactDOM.createRoot(document.getElementById('root')).render(
+const root = ReactDOM.createRoot(document.getElementById('root'))
+root.render(
   <React.StrictMode>
-    <ErrorBoundary>
+    <UserProvider>
       <ThoughtsProvider>
         <App />
       </ThoughtsProvider>
-    </ErrorBoundary>
+    </UserProvider>
   </React.StrictMode>
 )

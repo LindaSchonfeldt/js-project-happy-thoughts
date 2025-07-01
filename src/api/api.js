@@ -22,14 +22,10 @@ const deduplicateRequest = async (key, requestFn) => {
 }
 
 // Helper function - only add auth headers if token exists
-const getAuthHeaders = (requireAuth = false) => {
-  const token = localStorage.getItem('token')
+function getAuthHeaders() {
   const headers = { 'Content-Type': 'application/json' }
-
-  if (token || requireAuth) {
-    headers['Authorization'] = `Bearer ${token}`
-  }
-
+  const token = localStorage.getItem('token')
+  if (token) headers.Authorization = `Bearer ${token}`
   return headers
 }
 

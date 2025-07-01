@@ -1,10 +1,5 @@
 import React, { useEffect, useState } from 'react'
-import {
-  Route,
-  BrowserRouter as Router,
-  Routes,
-  useLocation
-} from 'react-router-dom'
+import { Route, BrowserRouter as Router, Routes } from 'react-router-dom'
 
 import { LikedThoughts } from './components/LikedThoughts'
 import { Loader } from './components/Loader'

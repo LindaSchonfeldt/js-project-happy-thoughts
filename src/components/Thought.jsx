@@ -83,7 +83,8 @@ const LikeCounterStyled = styled.div`
   width: 100%;
 `
 const StyledUserName = styled.span`
-  font-weight: 600;
+  font-weight: 500;
+  font-size: 13px;
   color: #333;
 `
 
