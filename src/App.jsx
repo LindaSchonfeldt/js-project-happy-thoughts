@@ -58,19 +58,20 @@ export const App = () => {
   }
 
   // Saves the updated thought when modal form is submitted
-  const handleSaveThoughtUpdate = async (id, updatedData) => {
-    try {
-      // Handle both formats - if updatedData is a string or an object
-      const dataToUpdate =
-        typeof updatedData === 'string' ? { message: updatedData } : updatedData
+  const handleSaveThoughtUpdate = async (updateData) => {
+    // Debug the parameters
+    console.log('App: Saving update with:', {
+      thoughtId: updatingThought?._id,
+      updateData
+    })
 
-      await updateThought(id, dataToUpdate)
-      setIsUpdateModalOpen(false)
-      setUpdatingThought(null)
-    } catch (error) {
-      console.error('Failed to update thought:', error)
-      alert('Failed to update your thought. Please try again.')
+    if (!updatingThought || !updatingThought._id) {
+      console.error('No thought selected or missing ID')
+      return { success: false }
     }
+
+    // Make sure both parameters are passed correctly
+    return await updateThought(updatingThought._id, updateData)
   }
 
   // Extract user info from token on mount or when token changes
@@ -197,8 +198,6 @@ export const App = () => {
     )
   }
 
-  console.log('Debug pagination:', { currentPage, totalPages }) // Add this debug line
-
   // Always show main app (no login gate!)
   return (
     <Router basename='/'>
@@ -264,10 +263,8 @@ export const App = () => {
         <UpdateModal
           isOpen={isUpdateModalOpen}
           onClose={() => setIsUpdateModalOpen(false)}
-          initialMessage={updatingThought?.message || ''}
-          onSave={(message) =>
-            handleSaveThoughtUpdate(updatingThought?._id, message)
-          }
+          thought={updatingThought} // Ensure this contains the complete thought object
+          onSave={handleSaveThoughtUpdate}
         />
 
         {/* Only show main pagination on the home route */}

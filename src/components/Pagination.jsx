@@ -18,8 +18,6 @@ const PageButton = styled.button`
 `
 
 export const Pagination = ({ currentPage, totalPages, onPageChange }) => {
-  console.log('Pagination props:', { currentPage, totalPages }) // Debug log
-
   if (!totalPages || totalPages <= 1) return null
 
   return (

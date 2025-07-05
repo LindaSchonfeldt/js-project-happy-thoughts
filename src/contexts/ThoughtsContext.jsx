@@ -179,61 +179,23 @@ const ThoughtsProvider = ({ children }) => {
   // Find your updateThought function and update it:
 
   const updateThought = async (thoughtId, updatedData) => {
+    // Add debugging
+    console.log('Context: Updating thought with:', { thoughtId, updatedData })
+
     try {
-      // Optimistically update UI immediately
-      setThoughts((currentThoughts) =>
-        currentThoughts.map((thought) =>
-          thought._id === thoughtId
-            ? { ...thought, message: updatedData.message }
-            : thought
-        )
-      )
-
-      // Show a temporary notification
-      setNotification({
-        type: 'info',
-        message: 'Updating thought...'
-      })
-
-      // Call the API to persist the change
+      // Ensure both parameters are passed to the API call
       const result = await api.updateThought(thoughtId, updatedData)
 
       if (result.success) {
-        // Update was successful
-        setNotification({
-          type: 'success',
-          message: 'Thought updated successfully'
-        })
-
-        // Refresh thoughts list to ensure everything is in sync
-        // But this is optional since we already updated the UI optimistically
-        fetchThoughts(currentPage)
-
+        // Refresh thoughts list
+        fetchThoughts()
         return { success: true }
       } else {
-        // API call failed but UI is already updated
         console.error('API failed to update thought:', result.message)
-
-        setNotification({
-          type: 'warning',
-          message:
-            'Thought updated locally, but server update failed. Changes may not persist.'
-        })
-
-        return {
-          success: true,
-          localOnly: true,
-          serverError: result.message
-        }
+        return { success: false, message: result.message }
       }
     } catch (error) {
       console.error('Error updating thought:', error)
-
-      setNotification({
-        type: 'error',
-        message: 'Failed to update thought. Please try again.'
-      })
-
       return { success: false, error }
     }
   }

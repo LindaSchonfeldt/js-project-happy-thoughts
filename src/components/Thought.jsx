@@ -1,5 +1,5 @@
-import styled, { keyframes } from 'styled-components'
 import React from 'react'
+import styled, { keyframes } from 'styled-components'
 
 import { useLikeSystem } from '../hooks/useLikeSystem'
 import { useThoughtAuthorization } from '../hooks/useThoughtAuthorization'
@@ -141,16 +141,6 @@ export const Thought = ({
       hookIsOwn === true
   )
 
-  // Log for debugging - include more clear ownership information
-  console.log(
-    `Thought ${_id?.substring(
-      0,
-      8
-    )}: userId=${userId}, currentUser=${currentUserId}, ` +
-      `can edit=${canEdit}, isOwn=${isOwn}`
-  )
-  console.log(`Thought ${_id?.substring(0, 8)}: tags=`, tags)
-
   const extractHashtags = (messageText) => {
     if (!messageText || typeof messageText !== 'string') return []
 
@@ -171,14 +161,6 @@ export const Thought = ({
 
   // Extract hashtags from message content as fallback
   const extractedTags = extractHashtags(displayMessage)
-
-  // Log some debug info to help diagnose
-  console.log('Thought tags:', {
-    thoughtId: _id?.substring(0, 8),
-    providedTags: tags,
-    extractedTags,
-    willDisplay: tags?.length ? tags : extractedTags
-  })
 
   const handleUpdate = () => {
     if (onUpdate) {
@@ -210,14 +192,6 @@ export const Thought = ({
     typeof message === 'object'
       ? message.message || 'No message content'
       : message
-
-  // Add this debug code to help troubleshoot
-  console.log('Rendering thought with tags:', {
-    id: _id?.substring(0, 8),
-    tags,
-    tagsType: typeof tags,
-    isArray: Array.isArray(tags)
-  })
 
   return (
     <ThoughtContainer $isNew={isNew}>

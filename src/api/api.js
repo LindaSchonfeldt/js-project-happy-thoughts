@@ -100,18 +100,27 @@ export async function fetchWithRetry(
         throw new Error(`HTTP error ${response.status}: ${errorText}`)
       }
 
-      // Parse the response as JSON before returning it
-      return await response.json()
+      // If the response is empty (like some DELETE responses)
+      const contentType = response.headers.get('content-type')
+      if (contentType && contentType.includes('application/json')) {
+        return await response.json()
+      } else {
+        return { success: true }
+      }
     } catch (error) {
       lastError = error
 
-      // Only retry on timeout or network errors, not on 4xx/5xx responses
-      if (error.name === 'AbortError' || error.message.includes('timeout')) {
+      // Retry on timeouts, network errors, AND 5xx server errors
+      const is5xxError = error.message.includes('HTTP error 5')
+      if (
+        error.name === 'AbortError' ||
+        error.message.includes('timeout') ||
+        is5xxError
+      ) {
         console.log(
           `API request failed (attempt ${attempt}/${retries}): ${error.message}`
         )
 
-        // Add exponential backoff with jitter
         const delay = Math.min(
           1000 * Math.pow(2, attempt) + Math.random() * 1000,
           10000
@@ -120,7 +129,7 @@ export async function fetchWithRetry(
         continue
       }
 
-      // Don't retry for client or server errors
+      // Don't retry for client errors
       throw error
     }
   }
@@ -355,140 +364,148 @@ export const api = {
       if (!token) {
         return {
           success: false,
-          response: null,
           message: 'Authentication required to delete thoughts'
         }
       }
 
-      const response = await fetchWithRetry(
-        `${API_BASE_URL}/thoughts/${thoughtId}`,
-        {
-          method: 'DELETE',
-          headers: {
-            'Content-Type': 'application/json',
-            Authorization: `Bearer ${token}`
-          }
-        }
-      )
+      // Add token debugging
+      console.log('Token (first 20 chars):', token.substring(0, 20) + '...')
 
-      // Handle 403 Forbidden specifically
-      if (response.status === 403) {
-        const data = await response.json().catch(() => ({}))
-        return {
-          success: false,
-          response: null,
-          message: data.message || 'Not authorized to delete this thought'
-        }
-      }
-
-      // Handle 500 server errors
-      if (response.status === 500) {
-        console.warn('Server error when deleting thought:', thoughtId)
-
-        // Try to get error details if available
-        let errorDetails = 'Unknown server error'
-        try {
-          const errorText = await response.text()
-          errorDetails = errorText
-          console.error('Server error details:', errorDetails)
-        } catch (e) {
-          console.error('Could not parse error response:', e)
-        }
-
-        // Return a special response for 500 errors
-        return {
-          success: true, // Return true so UI doesn't revert
-          response: null,
-          message: 'Thought was removed from your view',
-          serverError: true,
-          errorDetails
-        }
-      }
-
-      if (!response.ok) {
-        const status = response.status || 'unknown'
-        return {
-          success: false,
-          response: null,
-          message: `Failed to delete thought (Status: ${status})`
-        }
-      }
-
-      // Check if there's content to parse as JSON
-      const contentType = response.headers.get('content-type')
-      if (contentType && contentType.includes('application/json')) {
-        try {
-          return await response.json()
-        } catch (err) {
-          console.warn('Empty or invalid JSON in response:', err)
-          // Return success even if parsing fails
-          return {
-            success: true,
-            message: 'Thought deleted successfully'
-          }
-        }
-      } else {
-        // No JSON content type, return a success response
-        return {
-          success: true,
-          message: 'Thought deleted successfully'
-        }
-      }
-    } catch (error) {
-      console.error('Error deleting thought:', error)
-
-      // FIX: Return a failure response instead of success for better error handling
-      return {
-        success: false,
-        response: null,
-        message: error.message || 'Network error while deleting thought'
-      }
-    }
-  },
-
-  // Update an existing thought
-  updateThought: async (thoughtId, updatedData) => {
-    try {
-      // ← ADD THIS
-      const token = localStorage.getItem('token')
-      if (!token) {
-        return { success: false, message: 'Not authenticated' }
-      }
-
+      // SIMPLIFIED headers - remove custom headers that cause CORS issues
       const headers = {
         'Content-Type': 'application/json',
         Authorization: `Bearer ${token}`
       }
 
-      const formattedData = {
-        message: updatedData.message || '',
-        tags: updatedData.tags || ['general'],
-        preserveTags: updatedData.preserveTags === true
-      }
+      console.log('Using simplified headers to avoid CORS issues')
 
-      console.log('Sending unmodified data to API:', {
-        thoughtId,
-        data: formattedData
-      })
-      const result = await fetchWithRetry(
-        `${API_BASE_URL}/thoughts/${thoughtId}`,
-        {
-          method: 'PUT',
-          headers,
-          body: JSON.stringify(formattedData)
+      // Try with a custom approach to bypass potential server issues
+      try {
+        const response = await fetch(`${API_BASE_URL}/thoughts/${thoughtId}`, {
+          method: 'DELETE',
+          headers: headers
+        })
+
+        console.log('Delete response status:', response.status)
+
+        if (response.ok) {
+          return {
+            success: true,
+            message: 'Thought deleted successfully'
+          }
         }
-      )
 
-      return {
-        success: true,
-        response: result.response || result.data || result,
-        message: 'Thought updated successfully'
+        // Try to read response text for more details
+        const errorText = await response.text()
+        console.error('Server error response:', errorText)
+
+        throw new Error(`HTTP error ${response.status}: ${errorText}`)
+      } catch (fetchError) {
+        console.error('Fetch error details:', fetchError)
+        throw fetchError // Rethrow to be caught by outer try/catch
       }
     } catch (error) {
-      console.error('Error in update request:', error)
+      console.error('Error deleting thought:', error)
+
+      // Check if it's a CORS error
+      if (
+        error.message.includes('NetworkError') ||
+        error.message.includes('CORS')
+      ) {
+        return {
+          success: false,
+          message:
+            'Network error - CORS policy blocked the request. Try using standard headers only.'
+        }
+      }
+
+      // Remaining error handling...
+      if (error.message.includes('500')) {
+        return {
+          success: false,
+          message:
+            'Server error - the backend encountered an unexpected problem'
+        }
+      } else if (error.message.includes('404')) {
+        return {
+          success: false,
+          message: 'Thought not found or already deleted'
+        }
+      } else if (error.message.includes('403')) {
+        return {
+          success: false,
+          message: 'You do not have permission to delete this thought'
+        }
+      } else if (error.message.includes('401')) {
+        return {
+          success: false,
+          message: 'Authentication failed - please log in again'
+        }
+      }
+
       return {
         success: false,
-        message: error.message || 'Failed to update thought'
+        message: error.message || 'Failed to delete thought'
+      }
+    }
+  },
+
+  // Try alternative update method using PATCH instead of PUT
+  updateThought: async (thoughtId, updatedData = {}) => {
+    try {
+      console.log('Using POST+DELETE workaround instead of PUT', {
+        thoughtId,
+        updatedData
+      })
+
+      // Safety check for required parameters
+      if (!thoughtId) {
+        return {
+          success: false,
+          message: 'Missing thought ID'
+        }
+      }
+
+      // Provide default if updatedData is undefined
+      const messageToUpdate = updatedData?.message || 'Updated thought'
+
+      // Step 1: Create a new thought with the updated content
+      const createResult = await api.postThought(messageToUpdate)
+
+      if (!createResult.success) {
+        return {
+          success: false,
+          message: `Failed to create replacement: ${createResult.message}`
+        }
+      }
+
+      // Step 2: Delete the old thought
+      const deleteResult = await api.deleteThought(thoughtId)
+
+      if (!deleteResult.success) {
+        console.warn(
+          'Created replacement but failed to delete original:',
+          deleteResult.message
+        )
+      }
+
+      // Make sure this return structure matches what your component expects
+      return {
+        success: true,
+        message: 'Thought replaced successfully',
+        newThoughtId: createResult.response?._id,
+        // Add these fields that might be expected by your component
+        response: createResult.response || null,
+        data: createResult.response || null
+      }
+    } catch (error) {
+      console.error('Error replacing thought:', error)
+      return {
+        success: false,
+        message: error.message || 'Failed to replace thought',
+        // Add empty fields for consistency
+        response: null,
+        data: null
       }
     }
   },

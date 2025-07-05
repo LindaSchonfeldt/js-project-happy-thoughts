@@ -28,6 +28,8 @@ const ModalHeader = styled.div`
   justify-content: space-between;
   align-items: center;
   margin-bottom: 16px;
+  font-family: inherit;
+  font-size: 18px;
 `
 
 const CloseButton = styled.button`
@@ -39,11 +41,32 @@ const CloseButton = styled.button`
 
 const TextArea = styled.textarea`
   width: 100%;
+  min-height: 100px;
   padding: 12px;
-  border: 1px solid #ddd;
-  border-radius: 4px;
+  border: 2px solid
+    ${(props) =>
+      props.$value.length > MAX_CHARS
+        ? 'red'
+        : props.$value.length > MAX_CHARS - 20
+        ? 'orange'
+        : props.$value.trim().length < MIN_CHARS &&
+          props.$value.trim().length > 0
+        ? '#f0ad4e'
+        : '#ccc'};
+  border-radius: 8px;
   font-family: inherit;
-  resize: none;
+  font-size: 16px;
+  transition: border-color 0.3s ease;
+
+  &:focus {
+    outline: none;
+    border-color: ${(props) =>
+      props.value.length > MAX_CHARS
+        ? 'red'
+        : props.value.length > MAX_CHARS - 20
+        ? 'orange'
+        : '#4a90e2'};
+  }
 `
 
 const ButtonContainer = styled.div`
@@ -80,18 +103,99 @@ const SaveButton = styled.button`
   }
 `
 
-export const UpdateModal = ({ isOpen, onClose, initialMessage, onSave }) => {
-  const [message, setMessage] = useState(initialMessage || '')
+const CharacterCounter = styled.div`
+  text-align: right;
+  margin-top: 4px;
+  font-size: 12px;
+  color: ${(props) => {
+    if (props.$isError) return '#e74c3c' // Red for error
+    if (props.$isWarning) return '#e67e22' // Orange for warning
+    if (props.$isTooShort) return '#f39c12' // Yellow for too short
+    return '#777' // Normal color
+  }};
+  font-weight: ${(props) => (props.$isInvalid ? '600' : '400')};
+`
 
-  // Update local state when prop changes
+const ErrorMessage = styled.div`
+  color: #e74c3c;
+  font-size: 14px;
+  margin: 8px 0;
+  padding: 4px 0;
+  font-weight: 500;
+`
+
+// Constants for validation
+const MIN_CHARS = 5
+const MAX_CHARS = 140
+
+export const UpdateModal = ({
+  isOpen,
+  onClose,
+  initialMessage,
+  onSave,
+  thought
+}) => {
+  const [message, setMessage] = useState('')
+  const [error, setError] = useState('')
+  const [charCount, setCharCount] = useState(0)
+
+  // Fix: Run effect regardless of isOpen state, but add console logs
   useEffect(() => {
-    setMessage(initialMessage || '')
-  }, [initialMessage])
+    console.log('UpdateModal useEffect triggered:', { isOpen, thought })
 
+    if (isOpen && thought?.message) {
+      console.log('Setting message to:', thought.message)
+      setMessage(thought.message)
+      setCharCount(thought.message.length)
+      setError('')
+    }
+  }, [thought, isOpen])
+
+  // Then handle visibility with the return statement
   if (!isOpen) return null
+
+  const handleMessageChange = (e) => {
+    const newMessage = e.target.value
+    setMessage(newMessage)
+    setCharCount(newMessage.length)
+
+    // Real-time validation
+    if (newMessage.trim().length > 0 && newMessage.trim().length < MIN_CHARS) {
+      setError(`Thought must be at least ${MIN_CHARS} characters`)
+    } else if (newMessage.length > MAX_CHARS) {
+      setError(`Thought cannot exceed ${MAX_CHARS} characters`)
+    } else {
+      setError('') // Clear error when valid
+    }
+  }
+
+  const validateMessage = () => {
+    if (message.trim().length < MIN_CHARS) {
+      setError(`Thought must be at least ${MIN_CHARS} characters`)
+      return false
+    }
+
+    if (message.length > MAX_CHARS) {
+      setError(`Thought cannot exceed ${MAX_CHARS} characters`)
+      return false
+    }
+
+    return true
+  }
 
   const handleSubmit = async (e) => {
     e.preventDefault()
+
+    // Validate before submitting
+    if (message.trim().length < MIN_CHARS) {
+      setError(`Thought must be at least ${MIN_CHARS} characters`)
+      return
+    }
+
+    if (message.length > MAX_CHARS) {
+      setError(`Thought cannot exceed ${MAX_CHARS} characters`)
+      return
+    }
 
     try {
       // Extract hashtags from message
@@ -106,8 +210,8 @@ export const UpdateModal = ({ isOpen, onClose, initialMessage, onSave }) => {
 
       // Create the update data - ALWAYS include the tags array with a default
       const updateData = {
-        message: message,
-        tags: extractedTags.length > 0 ? extractedTags : ['general'],
+        message: message.trim(),
+        tags: thought?.tags || [],
         // Always set preserveTags to true
         preserveTags: true
       }
@@ -148,18 +252,52 @@ export const UpdateModal = ({ isOpen, onClose, initialMessage, onSave }) => {
 
         <form onSubmit={handleSubmit}>
           <TextArea
+            $value={message}
             value={message}
-            onChange={(e) => setMessage(e.target.value)}
+            onChange={handleMessageChange}
             placeholder="What's on your mind?"
             rows={4}
             required
           />
 
+          {/* Character counter - changes color when approaching limit */}
+          <CharacterCounter
+            $count={message.length}
+            $isError={message.length > MAX_CHARS}
+            $isWarning={
+              message.length > MAX_CHARS - 20 && message.length <= MAX_CHARS
+            }
+            $isTooShort={
+              message.trim().length > 0 && message.trim().length < MIN_CHARS
+            }
+            $isInvalid={
+              message.length > MAX_CHARS ||
+              (message.trim().length < MIN_CHARS && message.trim().length > 0)
+            }
+          >
+            {message.length}/{MAX_CHARS}
+            {message.trim().length > 0 &&
+              message.trim().length < MIN_CHARS &&
+              ' (too short)'}
+          </CharacterCounter>
+
+          {/* Display validation error */}
+          {error && <ErrorMessage>{error}</ErrorMessage>}
+
           <ButtonContainer>
             <CancelButton type='button' onClick={onClose}>
               Cancel
             </CancelButton>
-            <SaveButton type='submit'>Save</SaveButton>
+            <SaveButton
+              type='submit'
+              disabled={
+                !message.trim() ||
+                message.trim().length < MIN_CHARS ||
+                message.length > MAX_CHARS
+              }
+            >
+              Save
+            </SaveButton>
           </ButtonContainer>
         </form>
       </ModalContent>
