@@ -28,7 +28,6 @@ export const App = () => {
     retryCount: 0
   })
 
-  // IMPORTANT: Destructure ALL these values from context
   const {
     thoughts,
     loading,
@@ -42,7 +41,9 @@ export const App = () => {
     updateThought,
     fetchThoughts,
     notification,
-    setNotification
+    setNotification,
+    refreshThoughtsOnAuthChange,
+    resetToFirstPageOnLogin
   } = useThoughts()
 
   // Opens the update modal when a thought is selected for editing
@@ -108,10 +109,35 @@ export const App = () => {
     }
   }, [currentUserId])
 
-  const handleLogout = () => {
+  const handleLogout = async () => {
+    console.log('Logging out and refreshing thoughts')
+
+    // Clear auth data
     localStorage.removeItem('token')
     setToken(null)
     setUser(null)
+
+    // Refresh thoughts to update UI ownership status
+    await refreshThoughtsOnAuthChange()
+
+    console.log('Logout complete, thoughts refreshed')
+  }
+
+  const handleLoginSuccess = async (authData) => {
+    console.log('Login successful, updating auth state and refreshing thoughts')
+
+    // Set auth data
+    setToken(authData.token)
+    setUser(authData.user)
+    localStorage.setItem('token', authData.token)
+
+    // Close login modal
+    setShowLogin(false)
+
+    // Reset to first page and refresh thoughts
+    await resetToFirstPageOnLogin()
+
+    console.log('Login complete, thoughts refreshed')
   }
 
   // Check server status on mount
@@ -219,6 +245,7 @@ export const App = () => {
                 setToken(newToken)
                 setShowLogin(false) // Hide login after successful login
               }}
+              onLoginSuccess={handleLoginSuccess} // ✅ Use enhanced login handler
             />
           </div>
         )}

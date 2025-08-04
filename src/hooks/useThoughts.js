@@ -189,6 +189,36 @@ export const useThoughts = () => {
     fetchThoughts(currentPage)
   }, [currentPage])
 
+  // ✅ Function to refresh thoughts on auth state change
+  const refreshThoughtsOnAuthChange = async () => {
+    console.log('Refreshing thoughts due to auth state change')
+
+    try {
+      setError(null)
+
+      // Re-fetch current page to update ownership status
+      await fetchThoughts(currentPage)
+
+      // Clear any thought-specific highlights
+      setNewThoughtId(null)
+    } catch (err) {
+      console.error('Error refreshing thoughts on auth change:', err)
+      setError('Failed to refresh thoughts after login/logout')
+    }
+  }
+
+  // ✅ Function to reset to first page on login
+  const resetToFirstPageOnLogin = async () => {
+    console.log('Resetting to first page after login')
+
+    try {
+      setCurrentPage(1)
+      await fetchThoughts(1)
+    } catch (err) {
+      console.error('Error resetting to first page:', err)
+    }
+  }
+
   return {
     thoughts,
     loading,
@@ -202,6 +232,8 @@ export const useThoughts = () => {
     createThought,
     deleteThought,
     updateThought,
-    fetchThoughts
+    fetchThoughts,
+    refreshThoughtsOnAuthChange,
+    resetToFirstPageOnLogin
   }
 }
