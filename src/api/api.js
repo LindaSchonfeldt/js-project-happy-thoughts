@@ -529,11 +529,8 @@ export const api = {
   },
 
   signupUser: async (userData) => {
-    console.log('API: Signing up user:', userData.username)
-
     try {
-      // fetchWithRetry already returns the parsed JSON response
-      const result = await fetchWithRetry(`${API_BASE_URL}/users/signup`, {
+      const response = await fetch(`${BASE_URL}/users/signup`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'
@@ -541,52 +538,30 @@ export const api = {
         body: JSON.stringify(userData)
       })
 
-      console.log('Signup successful:', result)
+      const data = await response.json()
+      console.log('Signup API response:', data)
 
-      // Just return the result, which is already parsed JSON
-      return {
-        success: result.success === true,
-        token: result.token,
-        user: result.user,
-        message: result.message || 'Signup successful'
-      }
-    } catch (error) {
-      console.error('Signup error:', error)
-
-      // Try to parse error message if it's in JSON format
-      let errorMessage = error.message || 'An unexpected error occurred'
-      let errorDetails = {}
-
-      // Check if the error contains a JSON string from the API
-      if (error.message && error.message.includes('HTTP error')) {
-        try {
-          // Extract the JSON part from the error message
-          const jsonStart = error.message.indexOf('{')
-          if (jsonStart !== -1) {
-            const jsonString = error.message.substring(jsonStart)
-            const parsedError = JSON.parse(jsonString)
-
-            // Get the user-friendly message
-            errorMessage =
-              parsedError.message || parsedError.response || errorMessage
-
-            // Extract validation details if available
-            if (parsedError.details) {
-              errorDetails = parsedError.details
-            }
-          }
-        } catch (parseError) {
-          console.error('Error parsing error response:', parseError)
+      // Don't throw error for 400 status - let component handle it
+      if (response.ok) {
+        return {
+          success: true,
+          user: data.response,
+          message: data.message,
+          token: data.response?.accessToken || data.token
+        }
+      } else {
+        // Return the error response instead of throwing
+        return {
+          success: false,
+          message: data.message || data.response || 'Signup failed',
+          errors: data.errors || null
         }
       }
-
-      // Return a structured error response instead of throwing
+    } catch (error) {
+      console.error('Signup network error:', error)
       return {
         success: false,
-        token: null,
-        user: null,
-        message: errorMessage,
-        errors: errorDetails
+        message: 'Network error during signup'
       }
     }
   },

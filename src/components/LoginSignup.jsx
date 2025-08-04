@@ -162,6 +162,7 @@ const SignUp = ({ setToken, setIsLogin }) => {
   const handleSubmit = async (e) => {
     e.preventDefault()
     setErrors({})
+    setError(null) // Clear previous errors
 
     try {
       const result = await api.signupUser(formData)
@@ -170,20 +171,22 @@ const SignUp = ({ setToken, setIsLogin }) => {
         return // Stop execution if there was an error
       }
 
+      // Handle successful signup
       if (result.success && result.token) {
         localStorage.setItem('token', result.token)
         setToken(result.token)
-      } else if (result.errors) {
-        setErrors(result.errors)
       } else {
-        setErrors({ general: 'Signup failed' })
+        setError('Signup successful but no token received')
       }
     } catch (err) {
-      const resp = err.response?.data
-      if (resp?.errors) {
-        setErrors(resp.errors)
+      console.error('Signup error:', err)
+
+      // Handle the API error response
+      if (err.message && err.message.includes('Username already exists')) {
+        setError('Username already exists. Try logging in instead.')
+        setIsLogin(true) // Switch to login form
       } else {
-        setErrors({ general: resp?.message || err.message || 'Signup failed' })
+        setError(err.message || 'Signup failed. Please try again.')
       }
     }
   }
