@@ -245,7 +245,7 @@ export const App = () => {
                 setToken(newToken)
                 setShowLogin(false) // Hide login after successful login
               }}
-              onLoginSuccess={handleLoginSuccess} // ✅ Use enhanced login handler
+              onLoginSuccess={handleLoginSuccess}
             />
           </div>
         )}
