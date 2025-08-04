@@ -242,20 +242,6 @@ export const Thought = ({
         </LikeCounterStyled>
       </BottomSection>
       <StyledUserName>{isAnonymous ? 'Anonymous' : username}</StyledUserName>
-      {/* Add this temporarily in your Thought component for debugging */}
-      <button
-        onClick={() =>
-          console.log('Raw thought data:', {
-            _id,
-            userId,
-            username,
-            actualCurrentUserId,
-            isAuthenticated
-          })
-        }
-      >
-        Debug This Thought
-      </button>
     </ThoughtContainer>
   )
 }
