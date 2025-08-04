@@ -14,6 +14,7 @@ import { UpdateModal } from './components/UpdateModal'
 import { UserThoughts } from './components/UserThoughts'
 import { useThoughts } from './contexts/ThoughtsContext'
 import { GlobalStyles } from './GlobalStyles'
+import { AuthProvider } from './contexts/AuthContext'
 
 export const App = () => {
   const [token, setToken] = useState(localStorage.getItem('token'))
@@ -230,83 +231,87 @@ export const App = () => {
 
   // Always show main app (no login gate!)
   return (
-    <Router basename='/'>
-      <div className='App'>
-        <GlobalStyles />
+    <AuthProvider>
+      <Router basename='/'>
+        <div className='App'>
+          <GlobalStyles />
 
-        <NavBar
-          token={token}
-          showLogin={showLogin}
-          setShowLogin={setShowLogin}
-          handleLogout={handleLogout}
-        />
-
-        {/* Show login form if requested and not logged in */}
-        {showLogin && !token && (
-          <div style={{ marginBottom: '30px' }}>
-            <LoginSignup
-              setToken={(newToken) => {
-                setToken(newToken)
-                setShowLogin(false) // Hide login after successful login
-              }}
-              onLoginSuccess={handleLoginSuccess}
-            />
-          </div>
-        )}
-
-        <ThoughtForm onSubmit={createThought} />
-        <ServiceStatus
-          error={error}
-          isLoading={loading && !serverStarting}
-          onRetry={() => fetchThoughts(currentPage)}
-        />
-
-        {/* Show the notification if it exists */}
-        {notification && (
-          <Notification
-            type={notification.type}
-            message={notification.message}
-            onClose={() => setNotification(null)}
+          <NavBar
+            token={token}
+            showLogin={showLogin}
+            setShowLogin={setShowLogin}
+            handleLogout={handleLogout}
           />
-        )}
 
-        <Routes>
-          <Route
-            path='/'
-            element={
-              <ThoughtsList
-                thoughts={thoughts}
-                newThoughtId={newThoughtId}
-                onDelete={deleteThought}
-                onUpdate={handleOpenUpdateModal}
-                fetchThoughts={fetchThoughts}
-                currentPage={currentPage}
-                loading={loading}
+          {/* Show login form if requested and not logged in */}
+          {showLogin && !token && (
+            <div style={{ marginBottom: '30px' }}>
+              <LoginSignup
+                setToken={(newToken) => {
+                  setToken(newToken)
+                  setShowLogin(false) // Hide login after successful login
+                }}
+                onLoginSuccess={handleLoginSuccess}
               />
-            }
-          />
-          <Route path='/liked-thoughts' element={<LikedThoughts />} />
-          <Route path='/user-thoughts' element={<UserThoughts />} />
-          <Route path='*' element={<div>Page not found</div>} />{' '}
-          {/* Add catch-all route */}
-        </Routes>
+            </div>
+          )}
 
-        <UpdateModal
-          isOpen={isUpdateModalOpen}
-          onClose={() => setIsUpdateModalOpen(false)}
-          thought={updatingThought} // Ensure this contains the complete thought object
-          onSave={handleSaveThoughtUpdate}
-        />
-
-        {/* Only show main pagination on the home route */}
-        {location.pathname === '/' && (
-          <Pagination
-            currentPage={currentPage}
-            totalPages={totalPages}
-            onPageChange={setCurrentPage}
+          <ThoughtForm onSubmit={createThought} />
+          <ServiceStatus
+            error={error}
+            isLoading={loading && !serverStarting}
+            onRetry={() => fetchThoughts(currentPage)}
           />
-        )}
-      </div>
-    </Router>
+
+          {/* Show the notification if it exists */}
+          {notification && (
+            <Notification
+              type={notification.type}
+              message={notification.message}
+              onClose={() => setNotification(null)}
+            />
+          )}
+
+          <Routes>
+            <Route
+              path='/'
+              element={
+                <ThoughtsList
+                  thoughts={thoughts}
+                  newThoughtId={newThoughtId}
+                  onDelete={deleteThought}
+                  onUpdate={handleOpenUpdateModal}
+                  fetchThoughts={fetchThoughts}
+                  currentPage={currentPage}
+                  loading={loading}
+                />
+              }
+            />
+            <Route path='/liked-thoughts' element={<LikedThoughts />} />
+            <Route path='/user-thoughts' element={<UserThoughts />} />
+            <Route path='*' element={<div>Page not found</div>} />{' '}
+            {/* Add catch-all route */}
+          </Routes>
+
+          <UpdateModal
+            isOpen={isUpdateModalOpen}
+            onClose={() => setIsUpdateModalOpen(false)}
+            thought={updatingThought} // Ensure this contains the complete thought object
+            onSave={handleSaveThoughtUpdate}
+          />
+
+          {/* Only show main pagination on the home route */}
+          {location.pathname === '/' && (
+            <Pagination
+              currentPage={currentPage}
+              totalPages={totalPages}
+              onPageChange={setCurrentPage}
+            />
+          )}
+        </div>
+      </Router>
+    </AuthProvider>
   )
 }
+
+export default App

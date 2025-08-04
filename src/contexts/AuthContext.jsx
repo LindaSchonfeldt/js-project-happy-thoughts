@@ -7,20 +7,32 @@ export const AuthProvider = ({ children }) => {
   const [isAuthenticated, setIsAuthenticated] = useState(false)
   const [loading, setLoading] = useState(true)
 
-  // Initialize auth state from localStorage
+  // Initialize auth state from localStorage on app start
   useEffect(() => {
-    const token = localStorage.getItem('token')
-    if (token) {
-      try {
-        const decoded = JSON.parse(atob(token.split('.')[1]))
-        setUser({ userId: decoded.userId, username: decoded.username })
-        setIsAuthenticated(true)
-      } catch (error) {
-        console.error('Invalid token:', error)
-        localStorage.removeItem('token')
+    try {
+      const token = localStorage.getItem('token')
+      if (token) {
+        // Decode JWT to get user info
+        const payload = JSON.parse(atob(token.split('.')[1]))
+
+        // Check if token is not expired
+        if (payload.exp * 1000 > Date.now()) {
+          setUser({
+            userId: payload.userId,
+            username: payload.username
+          })
+          setIsAuthenticated(true)
+        } else {
+          // Token expired, remove it
+          localStorage.removeItem('token')
+        }
       }
+    } catch (error) {
+      console.error('Error loading auth state:', error)
+      localStorage.removeItem('token')
+    } finally {
+      setLoading(false)
     }
-    setLoading(false)
   }, [])
 
   const login = async (userData, token) => {
@@ -35,19 +47,15 @@ export const AuthProvider = ({ children }) => {
     localStorage.removeItem('token')
   }
 
-  return (
-    <AuthContext.Provider
-      value={{
-        user,
-        isAuthenticated,
-        loading,
-        login,
-        logout
-      }}
-    >
-      {children}
-    </AuthContext.Provider>
-  )
+  const value = {
+    user,
+    isAuthenticated,
+    loading,
+    login,
+    logout
+  }
+
+  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>
 }
 
 export const useAuth = () => {

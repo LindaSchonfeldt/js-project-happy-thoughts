@@ -230,13 +230,12 @@ npm run build
 src/
 ├── components/
 │   ├── Thought.jsx              # Individual thought with auth logic
-│   ├── ThoughtsList.jsx         # Thought feed with real-time updates
+│   ├── ThoughtsList.jsx         # Thought feed (auth integration pending)
 │   ├── ThoughtForm.jsx          # Create new thoughts
 │   ├── LoginSignup.jsx          # Authentication forms
 │   └── UpdateModal.jsx          # Edit existing thoughts
 ├── contexts/
-│   ├── AuthContext.jsx          # Global authentication state
-│   └── ThoughtsContext.jsx      # Global thought management
+│   └── AuthContext.jsx          # Global authentication state
 ├── hooks/
 │   ├── useThoughts.js           # Complete thought CRUD operations
 │   ├── useLikeSystem.js         # Individual like management
