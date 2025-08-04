@@ -124,25 +124,43 @@ export const Thought = ({
   // Get current user ID to compare with thought owner
   const actualCurrentUserId = currentUser || currentUserId
 
-  // ✅ FIXED: Use the new secure canModify logic instead
+  // Fix type consistency
   const canEdit = React.useMemo(() => {
-    // Must be authenticated
-    if (!isAuthenticated || !actualCurrentUserId) {
+    // Ensure both values are strings for comparison
+    const thoughtUserIdStr = userId?.toString()
+    const currentUserIdStr = actualCurrentUserId?.toString()
+
+    console.log('String comparison:', {
+      thoughtUserIdStr,
+      currentUserIdStr,
+      areEqual: thoughtUserIdStr === currentUserIdStr
+    })
+
+    if (!isAuthenticated || !currentUserIdStr) {
       return false
     }
 
-    // Must own the thought (not anonymous)
-    if (!userId || userId !== actualCurrentUserId) {
+    if (!thoughtUserIdStr || thoughtUserIdStr !== currentUserIdStr) {
       return false
     }
 
-    // Anonymous thoughts can't be modified by any user
     if (!username || username === 'Anonymous') {
       return false
     }
 
     return true
   }, [userId, actualCurrentUserId, isAuthenticated, username])
+
+  // Add this debug logging in your Thought component
+  console.log('Current thought authorization data:', {
+    thoughtId: _id,
+    thoughtUserId: userId,
+    thoughtUsername: username,
+    currentUserId: actualCurrentUserId,
+    isAuthenticated,
+    canEdit,
+    'userId === actualCurrentUserId': userId === actualCurrentUserId
+  })
 
   const extractHashtags = (messageText) => {
     if (!messageText || typeof messageText !== 'string') return []
