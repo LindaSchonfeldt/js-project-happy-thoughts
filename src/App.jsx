@@ -117,8 +117,10 @@ export const App = () => {
     setToken(null)
     setUser(null)
 
-    // Refresh thoughts to update UI ownership status
-    await refreshThoughtsOnAuthChange()
+    // Force immediate UI update + refresh thoughts
+    setTimeout(async () => {
+      await refreshThoughtsOnAuthChange()
+    }, 0) // Execute after state updates
 
     console.log('Logout complete, thoughts refreshed')
   }
@@ -134,8 +136,10 @@ export const App = () => {
     // Close login modal
     setShowLogin(false)
 
-    // Reset to first page and refresh thoughts
-    await resetToFirstPageOnLogin()
+    // Force immediate UI update + refresh thoughts
+    setTimeout(async () => {
+      await resetToFirstPageOnLogin()
+    }, 0) // Execute after state updates
 
     console.log('Login complete, thoughts refreshed')
   }

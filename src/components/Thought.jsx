@@ -1,4 +1,5 @@
-import React from 'react'
+import { useAuth } from '../contexts/AuthContext'
+import React, { useEffect, useState } from 'react'
 import styled, { keyframes } from 'styled-components'
 
 import { useLikeSystem } from '../hooks/useLikeSystem'
@@ -114,6 +115,16 @@ export const Thought = ({
   currentUserId, // Added currentUserId prop
   isAuthenticated // Added isAuthenticated prop
 }) => {
+  const { user: authUser, isAuthenticated: authIsAuthenticated } = useAuth()
+
+  // Force re-render when auth state changes
+  const [authVersion, setAuthVersion] = useState(0)
+
+  useEffect(() => {
+    // Increment version to force re-calculation when auth changes
+    setAuthVersion((prev) => prev + 1)
+  }, [authUser, authIsAuthenticated])
+
   const { isLiked, likeCount, handleLike } = useLikeSystem(_id, initialHearts)
   const {
     currentUser,
@@ -121,22 +132,24 @@ export const Thought = ({
     isOwn: hookIsOwn
   } = useThoughtAuthorization(userId)
 
-  // Get current user ID to compare with thought owner
-  const actualCurrentUserId = currentUser || currentUserId
+  // Use live auth state with fallback to props
+  const actualCurrentUserId = authUser?.userId || currentUser || currentUserId
+  const actualIsAuthenticated = authIsAuthenticated ?? isAuthenticated
 
-  // Fix type consistency
+  // Add authVersion to dependency array to force recalculation
   const canEdit = React.useMemo(() => {
-    // Ensure both values are strings for comparison
     const thoughtUserIdStr = userId?.toString()
     const currentUserIdStr = actualCurrentUserId?.toString()
 
-    console.log('String comparison:', {
+    console.log('Authorization check (v' + authVersion + '):', {
       thoughtUserIdStr,
       currentUserIdStr,
-      areEqual: thoughtUserIdStr === currentUserIdStr
+      actualIsAuthenticated,
+      areEqual: thoughtUserIdStr === currentUserIdStr,
+      authUser: authUser?.username
     })
 
-    if (!isAuthenticated || !currentUserIdStr) {
+    if (!actualIsAuthenticated || !currentUserIdStr) {
       return false
     }
 
@@ -149,7 +162,13 @@ export const Thought = ({
     }
 
     return true
-  }, [userId, actualCurrentUserId, isAuthenticated, username])
+  }, [
+    userId,
+    actualCurrentUserId,
+    actualIsAuthenticated,
+    username,
+    authVersion
+  ])
 
   // Add this debug logging in your Thought component
   console.log('Current thought authorization data:', {
