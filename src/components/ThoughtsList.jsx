@@ -1,3 +1,4 @@
+import { useAuth } from '../contexts/AuthContext'
 import styled from 'styled-components'
 
 import { Thought } from './Thought'
@@ -11,6 +12,8 @@ export default function ThoughtsList({
   currentPage,
   loading
 }) {
+  const { user, isAuthenticated } = useAuth() // Get current user info
+
   return (
     <>
       <RefreshButton
@@ -19,7 +22,7 @@ export default function ThoughtsList({
       >
         {loading ? 'Refreshing...' : 'Refresh Thoughts'}
       </RefreshButton>
-      {thoughts.map(t => (
+      {thoughts.map((t) => (
         <Thought
           key={t._id}
           _id={t._id}
@@ -34,6 +37,8 @@ export default function ThoughtsList({
           isOwn={t.isOwn}
           onDelete={() => onDelete(t._id)}
           onUpdate={() => onUpdate(t)}
+          currentUserId={user?.userId} // Pass current user ID
+          isAuthenticated={isAuthenticated} // Pass auth status
         />
       ))}
     </>

@@ -67,9 +67,6 @@ export const useThoughts = () => {
         setNewThoughtId(newThought._id)
         console.log('New thought ID set:', newThought._id)
 
-        // Save the thought ID to session storage to track ownership
-        saveThoughtToSession(newThought._id)
-
         // Add the new thought to the TOP of the existing list
         setThoughts((prevThoughts) => [newThought, ...prevThoughts])
 
@@ -184,18 +181,6 @@ export const useThoughts = () => {
     } catch (error) {
       console.error('Error decoding token:', error)
       return null
-    }
-  }
-
-  const saveThoughtToSession = (thoughtId) => {
-    const existing = JSON.parse(
-      sessionStorage.getItem('myCreatedThoughts') || '[]'
-    )
-    if (!existing.includes(thoughtId)) {
-      sessionStorage.setItem(
-        'myCreatedThoughts',
-        JSON.stringify([...existing, thoughtId])
-      )
     }
   }
 

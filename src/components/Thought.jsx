@@ -110,7 +110,9 @@ export const Thought = ({
   isAnonymous = true,
   isOwn = false, // ← accept the flag
   onDelete,
-  onUpdate
+  onUpdate,
+  currentUserId, // Added currentUserId prop
+  isAuthenticated // Added isAuthenticated prop
 }) => {
   const { isLiked, likeCount, handleLike } = useLikeSystem(_id, initialHearts)
   const {
@@ -120,26 +122,27 @@ export const Thought = ({
   } = useThoughtAuthorization(userId)
 
   // Get current user ID to compare with thought owner
-  const currentUserId = currentUser
+  const actualCurrentUserId = currentUser || currentUserId
 
-  const isSessionOwner = React.useMemo(() => {
-    // Check if this thought ID is in the session storage list of thoughts created by this user
-    const sessionThoughts = JSON.parse(
-      sessionStorage.getItem('myCreatedThoughts') || '[]'
-    )
-    return sessionThoughts.includes(_id)
-  }, [_id])
+  // ✅ FIXED: Use the new secure canModify logic instead
+  const canEdit = React.useMemo(() => {
+    // Must be authenticated
+    if (!isAuthenticated || !actualCurrentUserId) {
+      return false
+    }
 
-  // Update the canEdit check:
-  const canEdit = Boolean(
-    // Case 1: Specific user-owned thoughts (non-anonymous)
-    (userId && currentUserId && userId === currentUserId) ||
-      // Case 2: Session-owned anonymous thoughts
-      (isAnonymous === true && isSessionOwner) ||
-      // Case 3: Legacy support for isOwn flag
-      isOwn === true ||
-      hookIsOwn === true
-  )
+    // Must own the thought (not anonymous)
+    if (!userId || userId !== actualCurrentUserId) {
+      return false
+    }
+
+    // Anonymous thoughts can't be modified by any user
+    if (!username || username === 'Anonymous') {
+      return false
+    }
+
+    return true
+  }, [userId, actualCurrentUserId, isAuthenticated, username])
 
   const extractHashtags = (messageText) => {
     if (!messageText || typeof messageText !== 'string') return []
@@ -203,6 +206,7 @@ export const Thought = ({
       <MessageSection>{displayMessageFinal}</MessageSection>
 
       <BottomSection>
+        {/* ✅ Use canModify instead of canEdit */}
         {canEdit && (
           <ActionRow>
             <Button variant='danger' onClick={handleDelete} text='Delete' />
