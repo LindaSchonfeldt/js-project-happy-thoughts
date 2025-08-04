@@ -41,20 +41,13 @@ export const useLikeSystem = (thoughtId, initialHearts) => {
   }
 
   const handleLike = () => {
-    // If already liked, don't make API call, just update UI
-    if (isLiked) {
-      setIsLiked(false)
-      setLikeCount((prevCount) => prevCount - 1)
-      updateLocalStorage(false)
-      return // TODO: Update to make API call for unliking
-    }
+    // Update UI optimistically for both like and unlike
+    const newLikedState = !isLiked
+    setIsLiked(newLikedState)
+    setLikeCount((prevCount) => (newLikedState ? prevCount + 1 : prevCount - 1))
+    updateLocalStorage(newLikedState)
 
-    // For likes, update UI optimistically and make API call
-    setIsLiked(true)
-    setLikeCount((prevCount) => prevCount + 1)
-    updateLocalStorage(true)
-
-    // Use the centralized API function instead of direct fetch
+    // ✅ FIX: Make API call for both like AND unlike
     api
       .likeThought(thoughtId)
       .then((data) => {
@@ -68,9 +61,11 @@ export const useLikeSystem = (thoughtId, initialHearts) => {
         console.error('Error updating like status:', error)
 
         // Revert UI changes on error
-        setIsLiked(false)
-        setLikeCount((prevCount) => prevCount - 1)
-        updateLocalStorage(false)
+        setIsLiked(!newLikedState) // Revert to previous state
+        setLikeCount((prevCount) =>
+          newLikedState ? prevCount - 1 : prevCount + 1
+        )
+        updateLocalStorage(!newLikedState) // Revert localStorage
       })
   }
 

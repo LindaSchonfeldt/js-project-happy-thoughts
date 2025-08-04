@@ -42,7 +42,7 @@ export const App = () => {
     updateThought,
     fetchThoughts,
     notification,
-    setNotification // Add this line to fix the error
+    setNotification
   } = useThoughts()
 
   // Opens the update modal when a thought is selected for editing
