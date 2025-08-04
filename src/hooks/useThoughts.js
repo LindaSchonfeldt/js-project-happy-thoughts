@@ -220,16 +220,3 @@ export const useThoughts = () => {
     fetchThoughts
   }
 }
-
-// In your Thought component or wherever you check if user can delete
-const canDelete = useMemo(() => {
-  console.log('Authorization check:', {
-    thoughtUserId: thought.userId,
-    currentUserId: currentUserId,
-    thoughtUserIdType: typeof thought.userId,
-    currentUserIdType: typeof currentUserId,
-    areEqual: thought.userId === currentUserId
-  })
-
-  return thought.userId === currentUserId
-}, [thought.userId, currentUserId])
