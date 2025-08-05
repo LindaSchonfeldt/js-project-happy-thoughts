@@ -3,6 +3,7 @@ import React, { useState } from 'react'
 import styled from 'styled-components'
 
 import * as api from '../api/api'
+import { media } from '../media.js'
 import { Button } from './Button'
 
 const Title = styled.h3`
@@ -21,6 +22,12 @@ const StyledForm = styled.form`
   width: 100%;
   max-width: 500px;
 
+  ${media.mobile} {
+    flex-direction: column;
+    gap: 8px;
+    max-width: 100%;
+  }
+
   input {
     width: 100%;
     padding: 5px;
@@ -30,6 +37,11 @@ const StyledForm = styled.form`
     font-family: 'Roboto Mono', monospace;
     color: var(--color-text);
     text-align: left;
+
+    ${media.mobile} {
+      padding: 8px;
+      font-size: 16px; // Prevents zoom on iOS
+    }
 
     &:focus {
       outline: none;
@@ -43,6 +55,11 @@ const ErrorContainer = styled.div`
   margin-top: 10px;
   width: 100%;
   max-width: 500px;
+
+  ${media.mobile} {
+    max-width: 100%;
+    padding: 0 10px;
+  }
 `
 
 const ErrorMessage = styled.p`
@@ -51,6 +68,11 @@ const ErrorMessage = styled.p`
   margin: 0 0 5px 0; // Negative top margin to bring closer to input
   text-align: center;
   width: 100%;
+
+  ${media.mobile} {
+    font-size: 11px;
+    text-align: left;
+  }
 `
 
 const ToggleText = styled.p`
