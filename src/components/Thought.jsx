@@ -153,11 +153,6 @@ export const Thought = ({
     authChangeTimestamp // This dependency will trigger recalculation
   ])
 
-  // Log when canEdit changes
-  React.useEffect(() => {
-    console.log(`Thought ${_id} canEdit changed to:`, canEdit)
-  }, [canEdit, _id])
-
   const extractHashtags = (messageText) => {
     if (!messageText || typeof messageText !== 'string') return []
 
