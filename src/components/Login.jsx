@@ -75,7 +75,11 @@ export const Login = ({ onClose, onLoginSuccess }) => {
     setError('')
 
     try {
-      const result = await api.loginUser(username, password)
+      // Pass credentials as object
+      const result = await api.loginUser({
+        username: username,
+        password: password
+      })
 
       if (result.success) {
         console.log('Login API success:', result)
