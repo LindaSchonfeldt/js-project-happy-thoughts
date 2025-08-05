@@ -6,6 +6,8 @@ export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null)
   const [isAuthenticated, setIsAuthenticated] = useState(false)
   const [loading, setLoading] = useState(true)
+  // Add timestamp to force component updates
+  const [authChangeTimestamp, setAuthChangeTimestamp] = useState(Date.now())
 
   // Initialize auth state from localStorage on app start
   useEffect(() => {
@@ -32,19 +34,37 @@ export const AuthProvider = ({ children }) => {
       localStorage.removeItem('token')
     } finally {
       setLoading(false)
+      // Set initial timestamp
+      setAuthChangeTimestamp(Date.now())
     }
   }, [])
 
+  // Trigger component updates when login happens
   const login = async (userData, token) => {
+    console.log('AuthContext: Setting login state', userData)
+
     setUser(userData)
     setIsAuthenticated(true)
     localStorage.setItem('token', token)
+
+    // Trigger re-render in all consuming components
+    setAuthChangeTimestamp(Date.now())
+
+    console.log('AuthContext: Login state updated')
   }
 
+  // Trigger component updates when logout happens
   const logout = () => {
+    console.log('AuthContext: Logging out')
+
     setUser(null)
     setIsAuthenticated(false)
     localStorage.removeItem('token')
+
+    // Trigger re-render in all consuming components
+    setAuthChangeTimestamp(Date.now())
+
+    console.log('AuthContext: Logout complete')
   }
 
   const value = {
@@ -52,7 +72,9 @@ export const AuthProvider = ({ children }) => {
     isAuthenticated,
     loading,
     login,
-    logout
+    logout,
+    // Export timestamp so components can track changes
+    authChangeTimestamp
   }
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>

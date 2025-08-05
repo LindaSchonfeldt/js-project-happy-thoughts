@@ -1,7 +1,7 @@
-import { useAuth } from '../contexts/AuthContext'
-import React, { useEffect, useState } from 'react'
+import React, { useMemo } from 'react'
 import styled, { keyframes } from 'styled-components'
 
+import { useAuth } from '../contexts/AuthContext'
 import { useLikeSystem } from '../hooks/useLikeSystem'
 import { useThoughtAuthorization } from '../hooks/useThoughtAuthorization'
 import { media } from '../media'
@@ -112,41 +112,35 @@ export const Thought = ({
   isOwn = false, // ← accept the flag
   onDelete,
   onUpdate,
-  currentUserId, // Added currentUserId prop
-  isAuthenticated // Added isAuthenticated prop
+  currentUserId, // Keep as fallback
+  isAuthenticated // Keep as fallback
 }) => {
-  const { user: authUser, isAuthenticated: authIsAuthenticated } = useAuth()
-
-  // Force re-render when auth state changes
-  const [authVersion, setAuthVersion] = useState(0)
-
-  useEffect(() => {
-    // Increment version to force re-calculation when auth changes
-    setAuthVersion((prev) => prev + 1)
-  }, [authUser, authIsAuthenticated])
+  // Get live auth state from context
+  const {
+    user: authUser,
+    isAuthenticated: authIsAuthenticated,
+    authChangeTimestamp
+  } = useAuth()
 
   const { isLiked, likeCount, handleLike } = useLikeSystem(_id, initialHearts)
-  const {
-    currentUser,
-    canEdit: hookCanEdit,
-    isOwn: hookIsOwn
-  } = useThoughtAuthorization(userId)
 
-  // Use live auth state with fallback to props
-  const actualCurrentUserId = authUser?.userId || currentUser || currentUserId
+  // Use live auth state with fallbacks
+  const actualCurrentUserId = authUser?.userId || currentUserId
   const actualIsAuthenticated = authIsAuthenticated ?? isAuthenticated
 
-  // Add authVersion to dependency array to force recalculation
-  const canEdit = React.useMemo(() => {
+  // Include authChangeTimestamp to force recalculation
+  const canEdit = useMemo(() => {
     const thoughtUserIdStr = userId?.toString()
     const currentUserIdStr = actualCurrentUserId?.toString()
 
-    console.log('Authorization check (v' + authVersion + '):', {
+    console.log('Thought authorization check:', {
+      thoughtId: _id,
       thoughtUserIdStr,
       currentUserIdStr,
       actualIsAuthenticated,
-      areEqual: thoughtUserIdStr === currentUserIdStr,
-      authUser: authUser?.username
+      username,
+      authChangeTimestamp, // This will change on login/logout
+      areEqual: thoughtUserIdStr === currentUserIdStr
     })
 
     if (!actualIsAuthenticated || !currentUserIdStr) {
@@ -167,8 +161,13 @@ export const Thought = ({
     actualCurrentUserId,
     actualIsAuthenticated,
     username,
-    authVersion
+    authChangeTimestamp // This dependency will trigger recalculation
   ])
+
+  // Log when canEdit changes
+  React.useEffect(() => {
+    console.log(`Thought ${_id} canEdit changed to:`, canEdit)
+  }, [canEdit, _id])
 
   // Add this debug logging in your Thought component
   console.log('Current thought authorization data:', {
@@ -243,7 +242,7 @@ export const Thought = ({
       <MessageSection>{displayMessageFinal}</MessageSection>
 
       <BottomSection>
-        {/* ✅ Use canModify instead of canEdit */}
+        {/* This will now update immediately on login/logout */}
         {canEdit && (
           <ActionRow>
             <Button variant='danger' onClick={handleDelete} text='Delete' />

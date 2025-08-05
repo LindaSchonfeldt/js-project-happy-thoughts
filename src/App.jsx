@@ -12,9 +12,9 @@ import ThoughtForm from './components/ThoughtForm'
 import ThoughtsList from './components/ThoughtsList'
 import { UpdateModal } from './components/UpdateModal'
 import { UserThoughts } from './components/UserThoughts'
+import { AuthProvider } from './contexts/AuthContext'
 import { useThoughts } from './contexts/ThoughtsContext'
 import { GlobalStyles } from './GlobalStyles'
-import { AuthProvider } from './contexts/AuthContext'
 
 export const App = () => {
   const [token, setToken] = useState(localStorage.getItem('token'))
