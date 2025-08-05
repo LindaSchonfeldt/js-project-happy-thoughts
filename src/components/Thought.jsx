@@ -3,9 +3,8 @@ import styled, { keyframes } from 'styled-components'
 
 import { useAuth } from '../contexts/AuthContext'
 import { useLikeSystem } from '../hooks/useLikeSystem'
-import { useThoughtAuthorization } from '../hooks/useThoughtAuthorization'
-import { media } from '../utils/media'
 import { formatDate } from '../utils/dateHelpers'
+import { media } from '../utils/media'
 import { Button } from './Button'
 import { TagList } from './TagList'
 
@@ -39,10 +38,10 @@ const ThoughtContainer = styled.div`
 
   animation: ${(props) => (props.$isNew ? fadeIn : 'none')} 0.5s ease-out;
 
-  @media ${media.tablet} {
+  ${media.tablet} {
     width: 400px;
   }
-  @media ${media.desktop} {
+  ${media.desktop} {
     width: 500px;
   }
 `

@@ -1,8 +1,8 @@
 import { useState } from 'react'
 import styled from 'styled-components'
 
-import { media } from '../utils/media.js'
 import { sanitizeInput } from '../utils/inputUtils.js'
+import { media } from '../utils/media.js'
 import { Button } from './Button'
 
 export const StyledThoughtForm = styled.div`
@@ -17,11 +17,11 @@ export const StyledThoughtForm = styled.div`
   box-shadow: 6px 6px 0 0 black;
   margin: 2rem auto;
 
-  @media ${media.tablet} {
+  ${media.tablet} {
     padding: 24px 16px;
     width: 400px;
   }
-  @media ${media.desktop} {
+  ${media.desktop} {
     padding: 32px 24px;
     width: 500px;
   }
@@ -31,17 +31,14 @@ const StyledHeading = styled.h2`
   display: flex;
   align-items: flex-start;
   justify-content: flex-start;
-  font-size: 12px;
+  font-family: 'Roboto Mono', monospace;
+  font-size: 14px;
   margin-top: 0;
   color: #333;
   font-weight: 600;
   margin-bottom: 8px;
 
-  @media ${media.tablet} {
-    font-size: 14px;
-    margin-bottom: 16px;
-  }
-  @media ${media.desktop} {
+  ${media.tablet} {
     font-size: 16px;
     margin-bottom: 16px;
   }
@@ -167,13 +164,13 @@ export default function ThoughtForm({ onSubmit }) {
           </span>
         </StyledFooter>
         <Button
-          text='❤️ Send Happy Thought ❤️'
+          text='Send Happy Thought ❤️'
           type='submit'
           disabled={
             isSubmitting || message.trim().length === 0 || message.length > 140
           }
         >
-          {isSubmitting ? 'Posting...' : '❤️ Send Happy Thought'}
+          {isSubmitting ? 'Posting...' : 'Send Happy Thought ❤️'}
         </Button>
         {error && <StyledError>{error}</StyledError>}
       </StyledForm>

@@ -28,7 +28,7 @@ const Header = styled.div`
   width: 100%;
 
   ${media.tablet} {
-    width: auto;
+    width: 100%;
   }
 `
 
