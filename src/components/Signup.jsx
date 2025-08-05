@@ -2,7 +2,7 @@
 import React, { useState } from 'react'
 import styled from 'styled-components'
 
-import * as api from '../api/api'
+import { api } from '../api/api'
 import { media } from '../utils/media.js'
 import { Button } from './Button'
 
