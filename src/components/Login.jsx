@@ -56,8 +56,9 @@ const ToggleText = styled.p`
 const ErrorMessage = styled.p`
   color: red;
   font-size: 12px;
-  margin: 5px 0;
-  text-align: center;
+  margin: -5px 0 5px 0;
+  text-align: left;
+  width: 100%;
 `
 
 export const Login = ({ onClose, onLoginSuccess }) => {

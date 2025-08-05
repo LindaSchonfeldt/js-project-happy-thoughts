@@ -5,6 +5,14 @@ import styled from 'styled-components'
 import * as api from '../api/api'
 import { Button } from './Button'
 
+const Title = styled.h3`
+  text-align: center;
+  font-family: 'Roboto Mono', monospace;
+  font-size: 16px;
+  margin-bottom: 10px;
+  color: var(--color-text);
+`
+
 const StyledForm = styled.form`
   display: flex;
   flex-direction: row;
@@ -30,11 +38,19 @@ const StyledForm = styled.form`
   }
 `
 
+// ✅ NEW: Container for errors below the form
+const ErrorContainer = styled.div`
+  margin-top: 10px;
+  width: 100%;
+  max-width: 500px;
+`
+
 const ErrorMessage = styled.p`
   color: red;
   font-size: 12px;
-  margin: 5px 0;
+  margin: 0 0 5px 0; // Negative top margin to bring closer to input
   text-align: center;
+  width: 100%;
 `
 
 const ToggleText = styled.p`
@@ -116,6 +132,8 @@ export const SignUp = ({ onClose, onSignupSuccess, setIsLogin }) => {
   return (
     <div>
       <Title>Create Account</Title>
+
+      {/* ✅ FORM: No error messages inside */}
       <StyledForm onSubmit={handleSubmit}>
         <input
           type='text'
@@ -126,7 +144,6 @@ export const SignUp = ({ onClose, onSignupSuccess, setIsLogin }) => {
           }
           required
         />
-        {errors.username && <ErrorMessage>{errors.username}</ErrorMessage>}
 
         <input
           type='password'
@@ -137,7 +154,6 @@ export const SignUp = ({ onClose, onSignupSuccess, setIsLogin }) => {
           }
           required
         />
-        {errors.password && <ErrorMessage>{errors.password}</ErrorMessage>}
 
         <input
           type='password'
@@ -148,9 +164,6 @@ export const SignUp = ({ onClose, onSignupSuccess, setIsLogin }) => {
           }
           required
         />
-        {errors.confirmPassword && (
-          <ErrorMessage>{errors.confirmPassword}</ErrorMessage>
-        )}
 
         <Button
           type='submit'
@@ -158,13 +171,17 @@ export const SignUp = ({ onClose, onSignupSuccess, setIsLogin }) => {
           disabled={loading}
           text={loading ? 'Creating Account...' : 'Sign Up'}
         />
-
-        {errors.general && <ErrorMessage>{errors.general}</ErrorMessage>}
       </StyledForm>
 
-      <ToggleText onClick={() => setIsLogin(true)}>
-        Already have an account? Login
-      </ToggleText>
+      {/* ✅ ERRORS: All displayed below the form */}
+      <ErrorContainer>
+        {errors.username && <ErrorMessage>{errors.username}</ErrorMessage>}
+        {errors.password && <ErrorMessage>{errors.password}</ErrorMessage>}
+        {errors.confirmPassword && (
+          <ErrorMessage>{errors.confirmPassword}</ErrorMessage>
+        )}
+        {errors.general && <ErrorMessage>{errors.general}</ErrorMessage>}
+      </ErrorContainer>
     </div>
   )
 }

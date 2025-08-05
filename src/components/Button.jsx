@@ -81,8 +81,6 @@ export const StyledButton = styled.button`
   ${(props) =>
     (props.$variant === 'login' || !props.$variant) &&
     `
-    min-width: 20px;
-    margin: 10px 0;
     padding: 8px 16px;
     color: var(--color-text);
     background-color: var(--color-primary);
@@ -95,6 +93,7 @@ export const StyledButton = styled.button`
     font-size: 12px;
     font-weight: 500;
     font-family: 'Roboto Mono', monospace;
+    white-space: nowrap;   
     
     &:hover {
       background-color: var(--color-secondary);
