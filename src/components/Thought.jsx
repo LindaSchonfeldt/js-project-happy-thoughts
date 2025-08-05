@@ -132,16 +132,6 @@ export const Thought = ({
     const thoughtUserIdStr = userId?.toString()
     const currentUserIdStr = actualCurrentUserId?.toString()
 
-    console.log('Thought authorization check:', {
-      thoughtId: _id,
-      thoughtUserIdStr,
-      currentUserIdStr,
-      actualIsAuthenticated,
-      username,
-      authChangeTimestamp, // This will change on login/logout
-      areEqual: thoughtUserIdStr === currentUserIdStr
-    })
-
     if (!actualIsAuthenticated || !currentUserIdStr) {
       return false
     }
@@ -167,17 +157,6 @@ export const Thought = ({
   React.useEffect(() => {
     console.log(`Thought ${_id} canEdit changed to:`, canEdit)
   }, [canEdit, _id])
-
-  // Add this debug logging in your Thought component
-  console.log('Current thought authorization data:', {
-    thoughtId: _id,
-    thoughtUserId: userId,
-    thoughtUsername: username,
-    currentUserId: actualCurrentUserId,
-    isAuthenticated,
-    canEdit,
-    'userId === actualCurrentUserId': userId === actualCurrentUserId
-  })
 
   const extractHashtags = (messageText) => {
     if (!messageText || typeof messageText !== 'string') return []
