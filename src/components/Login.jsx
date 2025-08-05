@@ -75,7 +75,7 @@ export const Login = ({ onClose, onLoginSuccess }) => {
     setError('')
 
     try {
-      const result = await api.login(username, password)
+      const result = await api.loginUser(username, password)
 
       if (result.success) {
         console.log('Login API success:', result)
