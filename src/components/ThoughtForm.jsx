@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import styled from 'styled-components'
 
-import { media } from '../media'
+import { media } from '../utils/media.js'
 import { sanitizeInput } from '../utils/inputUtils.js'
 import { Button } from './Button'
 

@@ -3,7 +3,7 @@ import React, { useState } from 'react'
 import styled from 'styled-components'
 
 import * as api from '../api/api'
-import { media } from '../media.js'
+import { media } from '../utils/media.js'
 import { Button } from './Button'
 
 const Title = styled.h3`
@@ -16,31 +16,31 @@ const Title = styled.h3`
 
 const StyledForm = styled.form`
   display: flex;
-  flex-direction: row;
-  align-items: center;
-  gap: 10px;
-  width: 100%;
-  max-width: 500px;
+  flex-direction: column;
+  gap: 8px;
+  max-width: 100%;
 
-  ${media.mobile} {
-    flex-direction: column;
-    gap: 8px;
-    max-width: 100%;
+  ${media.tablet} {
+    flex-direction: row;
+    align-items: center;
+    gap: 10px;
+    width: 100%;
+    max-width: 500px;
   }
 
   input {
     width: 100%;
-    padding: 5px;
+    padding: 8px;
     border: 2px solid #ccc;
     box-sizing: border-box;
-    font-size: 14px;
     font-family: 'Roboto Mono', monospace;
+    font-size: 16px; // Prevents zoom on iOS
     color: var(--color-text);
     text-align: left;
 
-    ${media.mobile} {
-      padding: 8px;
-      font-size: 16px; // Prevents zoom on iOS
+    ${media.tablet} {
+      padding: 5px;
+      font-size: 14px;
     }
 
     &:focus {
@@ -50,40 +50,27 @@ const StyledForm = styled.form`
   }
 `
 
-// ✅ NEW: Container for errors below the form
 const ErrorContainer = styled.div`
-  margin-top: 10px;
-  width: 100%;
-  max-width: 500px;
+  max-width: 100%;
+  padding: 0 10px;
 
-  ${media.mobile} {
-    max-width: 100%;
-    padding: 0 10px;
+  ${media.tablet} {
+    margin-top: 10px;
+    width: 100%;
+    max-width: 500px;
   }
 `
 
 const ErrorMessage = styled.p`
   color: red;
-  font-size: 12px;
+  font-size: 11px;
   margin: 0 0 5px 0; // Negative top margin to bring closer to input
-  text-align: center;
+  text-align: left;
   width: 100%;
 
-  ${media.mobile} {
-    font-size: 11px;
-    text-align: left;
-  }
-`
-
-const ToggleText = styled.p`
-  font-size: 14px;
-  color: #666;
-  cursor: pointer;
-  text-decoration: underline;
-  margin: 0;
-
-  &:hover {
-    color: var(--color-primary);
+  ${media.tablet} {
+    font-size: 12px;
+    text-align: center;
   }
 `
 
