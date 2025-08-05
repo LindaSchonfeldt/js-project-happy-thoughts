@@ -82,9 +82,19 @@ export const StyledButton = styled.button`
     (props.$variant === 'login' || !props.$variant) &&
     `
     min-width: 20px;
-    padding: 10px 20px;
-    background-color: transparent;
-    border: solid 1px black;
+    margin: 10px 0;
+    padding: 8px 16px;
+    color: var(--color-text);
+    background-color: var(--color-primary);
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    align-items: center;
+    justify-content: center;
+    display: flex;
+    font-size: 12px;
+    font-weight: 500;
+    font-family: 'Roboto Mono', monospace;
     
     &:hover {
       background-color: var(--color-secondary);

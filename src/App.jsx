@@ -3,7 +3,7 @@ import { Route, BrowserRouter as Router, Routes } from 'react-router-dom'
 
 import { LikedThoughts } from './components/LikedThoughts'
 import { Loader } from './components/Loader'
-import { LoginSignup } from './components/LoginSignup'
+import { Login } from './components/Login'
 import { NavBar } from './components/NavBar'
 import { Notification } from './components/Notification'
 import { Pagination } from './components/Pagination'
@@ -246,7 +246,7 @@ export const App = () => {
           {/* Show login form if requested and not logged in */}
           {showLogin && !token && (
             <div style={{ marginBottom: '30px' }}>
-              <LoginSignup
+              <Login
                 setToken={(newToken) => {
                   setToken(newToken)
                   setShowLogin(false) // Hide login after successful login
