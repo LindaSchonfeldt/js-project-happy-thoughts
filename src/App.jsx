@@ -1,10 +1,16 @@
 import React, { useEffect, useState } from 'react'
-import { Route, BrowserRouter as Router, Routes } from 'react-router-dom'
+import {
+  Route,
+  BrowserRouter as Router,
+  Routes,
+  useLocation
+} from 'react-router-dom'
 
 import { LikedThoughts } from './components/LikedThoughts'
 import { Loader } from './components/Loader'
 import { Login } from './components/Login'
 import { NavBar } from './components/NavBar'
+import { NavigationTabs } from './components/NavigationTabs'
 import { Notification } from './components/Notification'
 import { Pagination } from './components/Pagination'
 import { ServiceStatus } from './components/ServiceStatus'
@@ -16,7 +22,10 @@ import { AuthProvider } from './contexts/AuthContext'
 import { useThoughts } from './contexts/ThoughtsContext'
 import { GlobalStyles } from './GlobalStyles'
 
-export const App = () => {
+// ✅ OPTION 1: Create an inner component that has access to location
+const AppContent = () => {
+  const location = useLocation() // ✅ Now location is available
+
   const [token, setToken] = useState(localStorage.getItem('token'))
   const [showLogin, setShowLogin] = useState(false)
   const [user, setUser] = useState(null)
@@ -239,86 +248,93 @@ export const App = () => {
     )
   }
 
-  // Always show main app (no login gate!)
+  return (
+    <div className='App'>
+      <GlobalStyles />
+
+      <NavBar
+        token={token}
+        showLogin={showLogin}
+        setShowLogin={setShowLogin}
+        handleLogout={handleLogout}
+      />
+
+      {/* Show login form if requested and not logged in */}
+      {showLogin && !token && (
+        <div style={{ marginBottom: '30px' }}>
+          <Login
+            setToken={(newToken) => {
+              setToken(newToken)
+              setShowLogin(false) // Hide login after successful login
+            }}
+            onLoginSuccess={handleLoginSuccess}
+          />
+        </div>
+      )}
+
+      <NavigationTabs />
+      {location.pathname === '/' && <ThoughtForm onSubmit={createThought} />}
+      <ServiceStatus
+        error={error}
+        isLoading={loading && !serverStarting}
+        onRetry={() => fetchThoughts(currentPage)}
+      />
+
+      {/* Show the notification if it exists */}
+      {notification && (
+        <Notification
+          type={notification.type}
+          message={notification.message}
+          onClose={() => setNotification(null)}
+        />
+      )}
+
+      <Routes>
+        <Route
+          path='/'
+          element={
+            <ThoughtsList
+              thoughts={thoughts}
+              newThoughtId={newThoughtId}
+              onDelete={deleteThought}
+              onUpdate={handleOpenUpdateModal}
+              fetchThoughts={fetchThoughts}
+              currentPage={currentPage}
+              loading={loading}
+            />
+          }
+        />
+        <Route path='/liked-thoughts' element={<LikedThoughts />} />
+        <Route path='/user-thoughts' element={<UserThoughts />} />
+        <Route path='*' element={<div>Page not found</div>} />{' '}
+        {/* Add catch-all route */}
+      </Routes>
+
+      <UpdateModal
+        isOpen={isUpdateModalOpen}
+        onClose={() => setIsUpdateModalOpen(false)}
+        thought={updatingThought} // Ensure this contains the complete thought object
+        onSave={handleSaveThoughtUpdate}
+      />
+
+      {/* Only show main pagination on the home route */}
+      {location.pathname === '/' && (
+        <Pagination
+          currentPage={currentPage}
+          totalPages={totalPages}
+          onPageChange={setCurrentPage}
+        />
+      )}
+    </div>
+  )
+}
+
+// ✅ Main App component wraps everything in Router
+export const App = () => {
   return (
     <AuthProvider>
       <Router basename='/'>
-        <div className='App'>
-          <GlobalStyles />
-
-          <NavBar
-            token={token}
-            showLogin={showLogin}
-            setShowLogin={setShowLogin}
-            handleLogout={handleLogout}
-          />
-
-          {/* Show login form if requested and not logged in */}
-          {showLogin && !token && (
-            <div style={{ marginBottom: '30px' }}>
-              <Login
-                setToken={(newToken) => {
-                  setToken(newToken)
-                  setShowLogin(false) // Hide login after successful login
-                }}
-                onLoginSuccess={handleLoginSuccess}
-              />
-            </div>
-          )}
-
-          <ThoughtForm onSubmit={createThought} />
-          <ServiceStatus
-            error={error}
-            isLoading={loading && !serverStarting}
-            onRetry={() => fetchThoughts(currentPage)}
-          />
-
-          {/* Show the notification if it exists */}
-          {notification && (
-            <Notification
-              type={notification.type}
-              message={notification.message}
-              onClose={() => setNotification(null)}
-            />
-          )}
-
-          <Routes>
-            <Route
-              path='/'
-              element={
-                <ThoughtsList
-                  thoughts={thoughts}
-                  newThoughtId={newThoughtId}
-                  onDelete={deleteThought}
-                  onUpdate={handleOpenUpdateModal}
-                  fetchThoughts={fetchThoughts}
-                  currentPage={currentPage}
-                  loading={loading}
-                />
-              }
-            />
-            <Route path='/liked-thoughts' element={<LikedThoughts />} />
-            <Route path='/user-thoughts' element={<UserThoughts />} />
-            <Route path='*' element={<div>Page not found</div>} />{' '}
-            {/* Add catch-all route */}
-          </Routes>
-
-          <UpdateModal
-            isOpen={isUpdateModalOpen}
-            onClose={() => setIsUpdateModalOpen(false)}
-            thought={updatingThought} // Ensure this contains the complete thought object
-            onSave={handleSaveThoughtUpdate}
-          />
-
-          {/* Only show main pagination on the home route */}
-          {location.pathname === '/' && (
-            <Pagination
-              currentPage={currentPage}
-              totalPages={totalPages}
-              onPageChange={setCurrentPage}
-            />
-          )}
-        </div>
+        <AppContent /> {/* Moved all content here */}
       </Router>
     </AuthProvider>
   )

@@ -2,67 +2,73 @@ import React, { createContext, useContext, useEffect, useState } from 'react'
 
 const AuthContext = createContext()
 
+export const useAuth = () => {
+  const context = useContext(AuthContext)
+  if (!context) {
+    throw new Error('useAuth must be used within an AuthProvider')
+  }
+  return context
+}
+
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null)
   const [isAuthenticated, setIsAuthenticated] = useState(false)
-  const [loading, setLoading] = useState(true)
-  // Add timestamp to force component updates
   const [authChangeTimestamp, setAuthChangeTimestamp] = useState(Date.now())
 
-  // Initialize auth state from localStorage on app start
+  // Initialize auth state from localStorage
   useEffect(() => {
-    try {
-      const token = localStorage.getItem('token')
-      if (token) {
-        // Decode JWT to get user info
-        const payload = JSON.parse(atob(token.split('.')[1]))
+    const token = localStorage.getItem('token')
+    if (token) {
+      try {
+        // Decode token to get user info
+        const base64Url = token.split('.')[1]
+        const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/')
+        const jsonPayload = decodeURIComponent(
+          atob(base64)
+            .split('')
+            .map((c) => '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2))
+            .join('')
+        )
+        const decoded = JSON.parse(jsonPayload)
 
-        // Check if token is not expired
-        if (payload.exp * 1000 > Date.now()) {
-          setUser({
-            userId: payload.userId,
-            username: payload.username
-          })
-          setIsAuthenticated(true)
-        } else {
-          // Token expired, remove it
-          localStorage.removeItem('token')
-        }
+        setUser({
+          userId: decoded.userId || decoded.id || decoded.sub,
+          username: decoded.username
+        })
+        setIsAuthenticated(true)
+        setAuthChangeTimestamp(Date.now()) // ✅ UPDATE TIMESTAMP
+      } catch (error) {
+        console.error('Error decoding token:', error)
+        localStorage.removeItem('token')
       }
-    } catch (error) {
-      console.error('Error loading auth state:', error)
-      localStorage.removeItem('token')
-    } finally {
-      setLoading(false)
-      // Set initial timestamp
-      setAuthChangeTimestamp(Date.now())
     }
   }, [])
 
-  // Trigger component updates when login happens
   const login = async (userData, token) => {
     console.log('AuthContext: Setting login state', userData)
 
-    setUser(userData)
-    setIsAuthenticated(true)
+    // Store token
     localStorage.setItem('token', token)
 
-    // Trigger re-render in all consuming components
-    setAuthChangeTimestamp(Date.now())
+    // Set auth state
+    setUser(userData)
+    setIsAuthenticated(true)
+    setAuthChangeTimestamp(Date.now()) // ✅ FORCE RE-RENDER
 
     console.log('AuthContext: Login state updated')
   }
 
-  // Trigger component updates when logout happens
   const logout = () => {
     console.log('AuthContext: Logging out')
 
+    // Clear storage
+    localStorage.removeItem('token')
+    localStorage.removeItem('userInfo')
+
+    // Clear state
     setUser(null)
     setIsAuthenticated(false)
-    localStorage.removeItem('token')
-
-    // Trigger re-render in all consuming components
-    setAuthChangeTimestamp(Date.now())
+    setAuthChangeTimestamp(Date.now()) // ✅ FORCE RE-RENDER
 
     console.log('AuthContext: Logout complete')
   }
@@ -70,20 +76,10 @@ export const AuthProvider = ({ children }) => {
   const value = {
     user,
     isAuthenticated,
-    loading,
+    authChangeTimestamp, // ✅ EXPOSE TIMESTAMP
     login,
-    logout,
-    // Export timestamp so components can track changes
-    authChangeTimestamp
+    logout
   }
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>
-}
-
-export const useAuth = () => {
-  const context = useContext(AuthContext)
-  if (!context) {
-    throw new Error('useAuth must be used within an AuthProvider')
-  }
-  return context
 }

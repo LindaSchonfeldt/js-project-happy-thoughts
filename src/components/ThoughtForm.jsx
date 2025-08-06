@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import styled from 'styled-components'
 
+import { useAuth } from '../contexts/AuthContext'
 import { sanitizeInput } from '../utils/inputUtils.js'
 import { media } from '../utils/media.js'
 import { Button } from './Button'
@@ -15,7 +16,7 @@ export const StyledThoughtForm = styled.div`
   background-color: var(--color-background);
   border: 2px solid black;
   box-shadow: 6px 6px 0 0 black;
-  margin: 2rem auto;
+  margin: 1rem auto;
 
   ${media.tablet} {
     padding: 24px 16px;
@@ -87,12 +88,24 @@ const StyledError = styled.div`
   margin-top: 8px;
 `
 
+const AuthNotice = styled.p`
+  font-size: 12px;
+  color: #666;
+  margin-top: 8px;
+  text-align: left;
+
+  ${media.tablet} {
+    font-size: 14px;
+  }
+`
+
 // Form component to accept thoughts from the user
 // with usePostThought (hook) that handles the actual posting logic
 
 export default function ThoughtForm({ onSubmit }) {
+  const { isAuthenticated, user } = useAuth()
   const [message, setMessage] = useState('')
-  const [charCount, setCharCount] = useState(0) // Add this line if missing
+  const [charCount, setCharCount] = useState(0)
   const [error, setError] = useState('')
   const [isSubmitting, setIsSubmitting] = useState(false)
 
@@ -172,6 +185,22 @@ export default function ThoughtForm({ onSubmit }) {
         >
           {isSubmitting ? 'Posting...' : 'Send Happy Thought ❤️'}
         </Button>
+
+        {/* Show auth status */}
+        {isAuthenticated ? (
+          <AuthNotice>
+            Posting as <strong>{user?.username}</strong>
+          </AuthNotice>
+        ) : (
+          <AuthNotice>
+            Posting anonymously •{' '}
+            <a href='#' onClick={() => setShowLogin(true)}>
+              Login
+            </a>{' '}
+            to post with your name
+          </AuthNotice>
+        )}
+
         {error && <StyledError>{error}</StyledError>}
       </StyledForm>
     </StyledThoughtForm>

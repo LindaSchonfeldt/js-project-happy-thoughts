@@ -3,32 +3,52 @@ import styled from 'styled-components'
 
 import { media } from '../utils/media.js'
 import { Button } from './Button'
-import { LogoutButton } from './LogoutButton'
 
 const NavContainer = styled.nav`
   display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  gap: 10px;
+  flex-direction: row;
+  align-items: center;
+  justify-content: space-between;
+
   margin-bottom: 20px;
   padding: 0 20px;
 
   ${media.tablet} {
     flex-direction: row;
-    justify-content: space-between;
-    align-items: center;
     height: 60px;
   }
 `
 
-const Header = styled.div`
+const LeftSection = styled.div`
   display: flex;
-  justify-content: space-between;
   align-items: center;
-  width: 100%;
+  gap: 10px;
 
   ${media.tablet} {
-    width: 100%;
+    flex: 1; // ✅ CHANGED: Let it grow
+    justify-content: flex-start; // ✅ ADDED: Align left
+  }
+`
+
+const RightSection = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 14px;
+
+  ${media.tablet} {
+    flex: 1; // ✅ CHANGED: Let it grow
+    justify-content: flex-end; // ✅ ADDED: Align right
+  }
+`
+
+const LoginSection = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 14px;
+
+  ${media.tablet} {
+    flex: 1; // ✅ CHANGED: Let it grow
+    justify-content: flex-end; // ✅ Push login to the right
   }
 `
 
@@ -37,38 +57,6 @@ const Logo = styled.h1`
   font-size: 1.5rem;
   font-family: 'Roboto Mono', monospace;
   cursor: pointer;
-`
-
-const NavLinks = styled.div`
-  display: flex;
-  align-items: center;
-  gap: 15px;
-  width: 100%;
-
-  ${media.tablet} {
-    width: auto;
-  }
-
-  // ✅ FIXED: Hide empty NavLinks when not logged in
-  &:empty {
-    display: none;
-  }
-`
-
-const NavLink = styled(Link)`
-  cursor: pointer;
-  font-size: 1rem;
-  font-family: 'Roboto Mono', monospace;
-
-  &:hover {
-    text-decoration: underline;
-  }
-`
-
-const NavActions = styled.div`
-  display: flex;
-  align-items: center;
-  gap: 14px;
 `
 
 const WelcomeText = styled.span`
@@ -120,36 +108,21 @@ export const NavBar = ({ token, showLogin, setShowLogin, handleLogout }) => {
 
   return (
     <NavContainer>
-      <Header>
+      {/* LEFT: Just the logo */}
+      <LeftSection>
         <Logo onClick={() => navigate('/')}>Happy Thoughts</Logo>
+      </LeftSection>
 
-        {!isLoggedIn && (
-          <div
-            className='mobile-login'
-            style={{
-              display: 'block'
-            }}
-          >
-            <Button variant='login' text='Login' onClick={handleLogin} />
-          </div>
-        )}
-      </Header>
-
-      {/* ✅ FIXED: Only show NavLinks when logged in */}
-      {isLoggedIn && (
-        <NavLinks>
-          <NavLink to='/'>All Thoughts</NavLink>
-          <NavLink to='/user-thoughts'>Created Thoughts</NavLink>
-          <NavLink to='/liked-thoughts'>Liked Thoughts</NavLink>
-        </NavLinks>
-      )}
-
-      {/* ✅ FIXED: Only show actions when logged in */}
-      {isLoggedIn && (
-        <NavActions>
+      {/* RIGHT: Login button OR user info */}
+      {!isLoggedIn ? (
+        <LoginSection>
+          <Button variant='login' text='Login' onClick={handleLogin} />
+        </LoginSection>
+      ) : (
+        <RightSection>
           <WelcomeText>Welcome {username}</WelcomeText>
-          <LogoutButton onLogout={handleLogout} />
-        </NavActions>
+          <Button variant='login' text='Logout' onClick={handleLogout} />
+        </RightSection>
       )}
     </NavContainer>
   )

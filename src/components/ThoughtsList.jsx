@@ -1,28 +1,7 @@
 import React, { useEffect } from 'react'
-import styled from 'styled-components'
 
 import { useAuth } from '../contexts/AuthContext'
 import { Thought } from './Thought'
-
-const RefreshButton = styled.button`
-  background: #4caf50;
-  color: white;
-  border: none;
-  padding: 8px 16px;
-  border-radius: 4px;
-  margin-bottom: 16px;
-  cursor: pointer;
-  font-weight: bold;
-
-  &:disabled {
-    background: #cccccc;
-    cursor: not-allowed;
-  }
-
-  &:hover:not(:disabled) {
-    background: #45a049;
-  }
-`
 
 export default function ThoughtsList({
   thoughts,
@@ -46,16 +25,9 @@ export default function ThoughtsList({
 
   return (
     <>
-      <RefreshButton
-        onClick={() => fetchThoughts(currentPage, true)}
-        disabled={loading}
-      >
-        {loading ? 'Refreshing...' : 'Refresh Thoughts'}
-      </RefreshButton>
-
       {thoughts.map((t) => (
         <Thought
-          key={`${t._id}-${updateKey}`} // ✅ Add updateKey to force re-render
+          key={`${t._id}-${updateKey}`} // Add updateKey to force re-render
           _id={t._id}
           message={t.message}
           hearts={t.hearts}
