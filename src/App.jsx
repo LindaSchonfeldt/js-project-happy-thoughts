@@ -137,12 +137,22 @@ export const App = () => {
     // Close login modal
     setShowLogin(false)
 
-    // Force immediate UI update + refresh thoughts
-    setTimeout(async () => {
-      await resetToFirstPageOnLogin()
-    }, 0) // Execute after state updates
+    // Check if function exists before calling
+    try {
+      // Force immediate UI update + refresh thoughts
+      setTimeout(async () => {
+        if (
+          resetToFirstPageOnLogin &&
+          typeof resetToFirstPageOnLogin === 'function'
+        ) {
+          await resetToFirstPageOnLogin()
+        }
+      }, 0) // Execute after state updates
 
-    console.log('Login complete, thoughts refreshed')
+      console.log('Login complete, thoughts refreshed')
+    } catch (error) {
+      console.error('Error in handleLoginSuccess:', error)
+    }
   }
 
   // Check server status on mount

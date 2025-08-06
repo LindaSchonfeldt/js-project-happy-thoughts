@@ -95,8 +95,10 @@ export const Login = ({ onClose, onLoginSuccess }) => {
           })
         }
 
-        // Close the modal
-        onClose()
+        // ✅ FIXED: Check if onClose exists before calling
+        if (onClose && typeof onClose === 'function') {
+          onClose()
+        }
       } else {
         setError(result.message || 'Login failed')
       }
