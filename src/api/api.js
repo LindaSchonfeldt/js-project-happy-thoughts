@@ -530,7 +530,7 @@ export const api = {
 
   signupUser: async (userData) => {
     try {
-      const response = await fetch(`${BASE_URL}/users/signup`, {
+      const response = await fetch(`${API_BASE_URL}/users/signup`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'
