@@ -3,6 +3,7 @@ import React, { useState } from 'react'
 import styled from 'styled-components'
 
 import { api } from '../api/api'
+import { useAuth } from '../contexts/AuthContext'
 import { media } from '../utils/media.js'
 import { Button } from './Button'
 
@@ -75,6 +76,7 @@ const ErrorMessage = styled.p`
 `
 
 export const SignUp = ({ onClose, onSignupSuccess, setIsLogin }) => {
+  const { login } = useAuth()
   const [formData, setFormData] = useState({
     username: '',
     password: '',
@@ -108,15 +110,8 @@ export const SignUp = ({ onClose, onSignupSuccess, setIsLogin }) => {
       })
 
       if (result.success) {
-        console.log('Signup successful:', result)
-
-        // Call success callback
-        if (onSignupSuccess) {
-          await onSignupSuccess({
-            token: result.token,
-            user: result.user
-          })
-        }
+        // Pass userData and token to AuthContext
+        login(result.user, result.token)
         onClose()
       } else {
         setErrors({ general: result.message || 'Signup failed' })

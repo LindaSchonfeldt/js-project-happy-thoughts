@@ -541,13 +541,12 @@ export const api = {
       const data = await response.json()
       console.log('Signup API response:', data)
 
-      // Don't throw error for 400 status - let component handle it
       if (response.ok) {
         return {
           success: true,
-          user: data.response,
+          user: data.response.user,
           message: data.message,
-          token: data.response?.accessToken || data.token
+          token: data.response.token
         }
       } else {
         // Return the error response instead of throwing
