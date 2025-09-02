@@ -1,3 +1,10 @@
+/**
+ * ErrorBoundary Component
+ * Purpose: Catches and displays errors in the React component tree.
+ * Usage: Wraps components to provide error handling UI.
+ * Author: Linda Schonfeldt
+ * Last Updated: September 2, 2025
+ */
 import React from 'react'
 import styled from 'styled-components'
 

@@ -1,3 +1,10 @@
+/**
+ * ThoughtsList Component
+ * Purpose: Displays a list of thoughts with pagination and actions.
+ * Usage: Used in main view and dashboard.
+ * Author: Linda Schonfeldt
+ * Last Updated: September 2, 2025
+ */
 import React, { useEffect } from 'react'
 
 import { useAuth } from '../contexts/AuthContext'

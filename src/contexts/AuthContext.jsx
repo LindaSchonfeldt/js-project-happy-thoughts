@@ -1,3 +1,10 @@
+/**
+ * AuthContext
+ * Purpose: Provides authentication state and logic via React Context API.
+ * Usage: Used by components to access user authentication info.
+ * Author: Linda Schonfeldt
+ * Last Updated: September 2, 2025
+ */
 import React, { createContext, useContext, useEffect, useState } from 'react'
 
 const AuthContext = createContext()

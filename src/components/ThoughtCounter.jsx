@@ -1,3 +1,10 @@
+/**
+ * ThoughtCounter Component
+ * Purpose: Displays the total number of thoughts.
+ * Usage: Used in dashboard and summary views.
+ * Author: Linda Schonfeldt
+ * Last Updated: September 2, 2025
+ */
 import styled from 'styled-components'
 
 const ThoughtCounterContainer = styled.div`

@@ -1,3 +1,10 @@
+/**
+ * Login Component
+ * Purpose: Handles user authentication and login form.
+ * Usage: Used in authentication flow and protected routes.
+ * Author: Linda Schonfeldt
+ * Last Updated: September 2, 2025
+ */
 import React, { useState } from 'react'
 import styled from 'styled-components'
 

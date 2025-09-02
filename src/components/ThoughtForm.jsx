@@ -1,3 +1,10 @@
+/**
+ * ThoughtForm Component
+ * Purpose: Handles creation and submission of new thoughts.
+ * Usage: Used in main view and user profile for posting thoughts.
+ * Author: Linda Schonfeldt
+ * Last Updated: September 2, 2025
+ */
 import { useState } from 'react'
 import styled from 'styled-components'
 

@@ -1,3 +1,10 @@
+/**
+ * Notification Component
+ * Purpose: Displays notifications and alerts to the user.
+ * Usage: Used for error, success, and info messages.
+ * Author: Linda Schonfeldt
+ * Last Updated: September 2, 2025
+ */
 import React, { useEffect } from 'react'
 import styled, { keyframes } from 'styled-components'
 

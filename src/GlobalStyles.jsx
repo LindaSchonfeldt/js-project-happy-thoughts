@@ -1,3 +1,10 @@
+/**
+ * GlobalStyles Component
+ * Purpose: Provides global CSS styles for the Happy Thoughts app.
+ * Usage: Imported and used in App.jsx.
+ * Author: Linda Schonfeldt
+ * Last Updated: September 2, 2025
+ */
 import { createGlobalStyle } from 'styled-components'
 
 export const GlobalStyles = createGlobalStyle`

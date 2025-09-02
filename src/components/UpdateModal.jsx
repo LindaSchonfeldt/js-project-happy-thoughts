@@ -1,3 +1,10 @@
+/**
+ * UpdateModal Component
+ * Purpose: Modal dialog for editing/updating a thought.
+ * Usage: Used in ThoughtsList and user profile views.
+ * Author: Linda Schonfeldt
+ * Last Updated: September 2, 2025
+ */
 import React, { useEffect, useState } from 'react'
 import styled from 'styled-components'
 

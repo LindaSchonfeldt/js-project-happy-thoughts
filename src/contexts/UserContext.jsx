@@ -1,4 +1,11 @@
-import { createContext, useState, useEffect } from 'react'
+/**
+ * UserContext
+ * Purpose: Provides user profile state and logic via React Context API.
+ * Usage: Used by components to access user data and actions.
+ * Author: Linda Schonfeldt
+ * Last Updated: September 2, 2025
+ */
+import { createContext, useEffect, useState } from 'react'
 
 export const UserContext = createContext(null)
 

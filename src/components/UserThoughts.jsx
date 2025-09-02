@@ -1,3 +1,10 @@
+/**
+ * UserThoughts Component
+ * Purpose: Displays thoughts created by the authenticated user.
+ * Usage: Used in user profile and dashboard views.
+ * Author: Linda Schonfeldt
+ * Last Updated: September 2, 2025
+ */
 import { jwtDecode } from 'jwt-decode'
 import React, { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'

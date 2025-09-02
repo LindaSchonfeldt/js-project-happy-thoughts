@@ -1,3 +1,10 @@
+/**
+ * ServiceStatus Component
+ * Purpose: Displays backend API/service status to the user.
+ * Usage: Used for health checks and error reporting.
+ * Author: Linda Schonfeldt
+ * Last Updated: September 2, 2025
+ */
 import styled from 'styled-components'
 
 const StatusContainer = styled.div`

@@ -1,3 +1,10 @@
+/**
+ * Thought Component
+ * Purpose: Displays a single thought with likes, tags, and actions.
+ * Usage: Used in ThoughtsList and user profile views.
+ * Author: Linda Schonfeldt
+ * Last Updated: September 2, 2025
+ */
 import React, { useMemo } from 'react'
 import styled, { keyframes } from 'styled-components'
 

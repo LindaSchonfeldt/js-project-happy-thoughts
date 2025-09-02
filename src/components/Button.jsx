@@ -1,3 +1,10 @@
+/**
+ * Button Component
+ * Purpose: Reusable button for UI actions in Happy Thoughts app.
+ * Usage: Used throughout the app for form submissions and actions.
+ * Author: Linda Schonfeldt
+ * Last Updated: September 2, 2025
+ */
 import React from 'react'
 import styled from 'styled-components'
 

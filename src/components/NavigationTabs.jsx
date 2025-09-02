@@ -1,3 +1,10 @@
+/**
+ * NavigationTabs Component
+ * Purpose: Provides tabbed navigation for different app sections.
+ * Usage: Used in main layout for switching views.
+ * Author: Linda Schonfeldt
+ * Last Updated: September 2, 2025
+ */
 import { Link, useLocation } from 'react-router-dom'
 import styled from 'styled-components'
 

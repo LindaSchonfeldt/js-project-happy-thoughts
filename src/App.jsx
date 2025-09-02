@@ -1,3 +1,10 @@
+/**
+ * App Component
+ * Purpose: Main React component for Happy Thoughts frontend.
+ * Usage: Root component rendered by main.jsx.
+ * Author: Linda Schonfeldt
+ * Last Updated: September 2, 2025
+ */
 import React, { useEffect, useState } from 'react'
 import {
   Route,
@@ -22,9 +29,9 @@ import { AuthProvider } from './contexts/AuthContext'
 import { useThoughts } from './contexts/ThoughtsContext'
 import { GlobalStyles } from './GlobalStyles'
 
-// ✅ OPTION 1: Create an inner component that has access to location
+// Create an inner component that has access to location
 const AppContent = () => {
-  const location = useLocation() // ✅ Now location is available
+  const location = useLocation() // Get current location for conditional rendering
 
   const [token, setToken] = useState(localStorage.getItem('token'))
   const [showLogin, setShowLogin] = useState(false)
@@ -336,7 +343,7 @@ const AppContent = () => {
   )
 }
 
-// ✅ Main App component wraps everything in Router
+// Main App component wraps everything in Router
 export const App = () => {
   return (
     <AuthProvider>

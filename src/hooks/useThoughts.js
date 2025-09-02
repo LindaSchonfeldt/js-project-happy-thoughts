@@ -1,3 +1,10 @@
+/**
+ * useThoughts Hook
+ * Purpose: Custom React hook for fetching and managing thoughts data.
+ * Usage: Used by components to access thoughts and update state.
+ * Author: Linda Schonfeldt
+ * Last Updated: September 2, 2025
+ */
 import { useEffect, useMemo, useState } from 'react'
 
 import { api } from '../api/api'

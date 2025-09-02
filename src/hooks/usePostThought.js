@@ -1,4 +1,12 @@
-import { useState, useRef } from 'react'
+/**
+ * usePostThought Hook
+ * Purpose: Custom React hook for posting new thoughts.
+ * Usage: Used by ThoughtForm and related components.
+ * Author: Linda Schonfeldt
+ * Last Updated: September 2, 2025
+ */
+import { useRef, useState } from 'react'
+
 import { api } from '../api/api'
 
 export const usePostThought = () => {

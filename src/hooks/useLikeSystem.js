@@ -1,3 +1,10 @@
+/**
+ * useLikeSystem Hook
+ * Purpose: Custom React hook for managing like functionality.
+ * Usage: Used by components to handle liking thoughts.
+ * Author: Linda Schonfeldt
+ * Last Updated: September 2, 2025
+ */
 import { useState } from 'react'
 
 import { api } from '../api/api'

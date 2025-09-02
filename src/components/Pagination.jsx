@@ -1,3 +1,10 @@
+/**
+ * Pagination Component
+ * Purpose: Handles pagination controls for thoughts list.
+ * Usage: Used in ThoughtsList and other paginated views.
+ * Author: Linda Schonfeldt
+ * Last Updated: September 2, 2025
+ */
 import React from 'react'
 import styled from 'styled-components'
 

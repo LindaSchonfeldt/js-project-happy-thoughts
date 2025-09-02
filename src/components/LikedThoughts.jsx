@@ -1,3 +1,10 @@
+/**
+ * LikedThoughts Component
+ * Purpose: Displays thoughts liked by the authenticated user.
+ * Usage: Used in user profile and dashboard views.
+ * Author: Linda Schonfeldt
+ * Last Updated: September 2, 2025
+ */
 import React, { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import styled from 'styled-components'

@@ -1,3 +1,10 @@
+/**
+ * TagList Component
+ * Purpose: Displays a list of tags for filtering thoughts.
+ * Usage: Used in sidebar and filter controls.
+ * Author: Linda Schonfeldt
+ * Last Updated: September 2, 2025
+ */
 import React from 'react'
 import styled from 'styled-components'
 

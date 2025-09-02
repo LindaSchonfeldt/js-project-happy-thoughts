@@ -1,4 +1,11 @@
 /**
+ * dateHelpers Utility
+ * Purpose: Provides helper functions for date formatting and manipulation.
+ * Usage: Used by components and hooks for displaying dates.
+ * Author: Linda Schonfeldt
+ * Last Updated: September 2, 2025
+ */
+/**
  * Formats a date string into a human-readable format
  * @param {string} dateString - ISO date string to format
  * @returns {string} - Formatted date as relative time or date string

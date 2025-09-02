@@ -1,3 +1,10 @@
+/**
+ * NavBar Component
+ * Purpose: Displays navigation links and user actions for Happy Thoughts app.
+ * Usage: Used at the top of the app for navigation.
+ * Author: Linda Schonfeldt
+ * Last Updated: September 2, 2025
+ */
 import { Link, useNavigate } from 'react-router-dom'
 import styled from 'styled-components'
 
@@ -25,8 +32,8 @@ const LeftSection = styled.div`
   gap: 10px;
 
   ${media.tablet} {
-    flex: 1; // ✅ CHANGED: Let it grow
-    justify-content: flex-start; // ✅ ADDED: Align left
+    flex: 1; 
+    justify-content: flex-start; 
   }
 `
 
@@ -36,8 +43,8 @@ const RightSection = styled.div`
   gap: 14px;
 
   ${media.tablet} {
-    flex: 1; // ✅ CHANGED: Let it grow
-    justify-content: flex-end; // ✅ ADDED: Align right
+    flex: 1; // 
+    justify-content: flex-end; 
   }
 `
 
@@ -47,8 +54,8 @@ const LoginSection = styled.div`
   gap: 14px;
 
   ${media.tablet} {
-    flex: 1; // ✅ CHANGED: Let it grow
-    justify-content: flex-end; // ✅ Push login to the right
+    flex: 1; 
+    justify-content: flex-end; 
   }
 `
 

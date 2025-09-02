@@ -1,3 +1,10 @@
+/**
+ * Loader Component
+ * Purpose: Displays a loading spinner or indicator.
+ * Usage: Used during data fetching and async operations.
+ * Author: Linda Schonfeldt
+ * Last Updated: September 2, 2025
+ */
 import { DotLottieReact } from '@lottiefiles/dotlottie-react'
 import { useEffect, useState } from 'react'
 import styled from 'styled-components'

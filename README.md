@@ -10,17 +10,18 @@ https://creative-hotteok-2e5655.netlify.app/
 
 ## Features
 
-- 🔐 **User Authentication** - JWT-based signup/login with secure session management
-- ✨ **Automatic Tag Generation** - AI-powered content analysis assigns relevant tags (#programming, #food, #emotions)
+- ✍️ **Post new happy thoughts**
 - 📝 **Thought Management** - Create, edit, and delete your own thoughts with real-time authorization
+- ❤️ **Like and view liked thoughts**
 - 💖 **Social Interactions** - Like system with optimistic UI updates and localStorage persistence
-- 🏷️ **Tag Filtering** - Filter thoughts by categories and trending topics
-- 📱 **Responsive Design** - Mobile-first design that works seamlessly across all devices
-- 🎨 **Theme Support** - Dynamic visual themes based on thought tags
-- 📄 **Smart Pagination** - Server-side pagination with efficient loading
-- 🔍 **User Profiles** - Personal dashboards for created and liked thoughts
-- ⚡ **Real-time Updates** - Instant UI updates with immediate auth state synchronization
+- ✨ **Automatic Tag Generation** - AI-powered content analysis assigns relevant tags (#programming, #food, #emotions)
+- 🔄 **Pagination and filtering**
+- 📱 **Responsive design**
+- 🔐 **User Authentication** - JWT-based signup/login with secure session management
 - 🛡️ **Security** - Proper authorization with ownership validation and anonymous user handling
+- ⚡ **Real-time Updates** - Instant UI updates with immediate auth state synchronization
+- ⚡ **Fast Vite-powered development** - Lightning-fast builds and hot module replacement
+- 🛠️ **Error boundaries and notifications** - Graceful error handling with user feedback
 
 ## Technical Architecture
 

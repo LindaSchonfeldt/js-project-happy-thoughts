@@ -1,3 +1,10 @@
+/**
+ * media Utility
+ * Purpose: Provides helper functions for media queries and responsive design.
+ * Usage: Used by components and hooks for responsive UI.
+ * Author: Linda Schonfeldt
+ * Last Updated: September 2, 2025
+ */
 export const media = {
   // Media queries for responsive design
   mobile: '@media (min-width: 320px)',

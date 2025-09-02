@@ -1,3 +1,10 @@
+/**
+ * LikeCounter Component
+ * Purpose: Displays and updates the like count for a thought.
+ * Usage: Used in Thought and ThoughtsList components.
+ * Author: Linda Schonfeldt
+ * Last Updated: September 2, 2025
+ */
 import { useState, useEffect } from 'react'
 import styled from 'styled-components'
 
