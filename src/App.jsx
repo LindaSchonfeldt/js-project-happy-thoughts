@@ -129,7 +129,14 @@ const AppContent = () => {
 
     // Force immediate UI update + refresh thoughts
     setTimeout(async () => {
-      await refreshThoughtsOnAuthChange()
+      // safe call: only call if function exists
+      if (typeof refreshThoughtsOnAuthChange === 'function') {
+        refreshThoughtsOnAuthChange()
+      } else {
+        console.warn(
+          'refreshThoughtsOnAuthChange is not a function, skipping refresh'
+        )
+      }
     }, 0) // Execute after state updates
 
     console.log('Logout complete, thoughts refreshed')

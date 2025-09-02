@@ -19,12 +19,13 @@ const Header = styled.h1`
   font-family: 'Roboto Mono', monospace;
   font-size: 24px;
   text-align: center;
+  margin: 32px auto;
   margin-bottom: 20px;
 `
 
 const EmptyState = styled.p`
   text-align: center;
-  margin: 40px 0;
+  margin: 0;
   color: #666;
 `
 

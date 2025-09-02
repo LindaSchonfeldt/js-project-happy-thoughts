@@ -1,42 +1,54 @@
 import { useState } from 'react'
 
 import { api } from '../api/api'
+import { useAuth } from '../contexts/AuthContext'
 
-export const useLikeSystem = (thoughtId, initialHearts) => {
-  // Track if the current user has liked this post (persisted via localStorage)
+export const useLikeSystem = (
+  thoughtId,
+  initialHearts,
+  initialIsLikedByUser = false
+) => {
+  const { isAuthenticated } = useAuth()
+
+  // For auth users: use server state, for anon: use localStorage
   const [isLiked, setIsLiked] = useState(() => {
-    try {
-      // Check localStorage on component mount
-      const likedPosts = JSON.parse(localStorage.getItem('likedPosts') || '[]')
-      return likedPosts.includes(thoughtId)
-    } catch (e) {
-      console.error('Error reading from localStorage:', e)
-      return false
+    if (isAuthenticated) {
+      // For auth users, trust the server-provided initialIsLikedByUser
+      return initialIsLikedByUser
+    } else {
+      // For anon users, check localStorage
+      try {
+        const likedPosts = JSON.parse(
+          localStorage.getItem('likedPosts') || '[]'
+        )
+        return likedPosts.includes(thoughtId)
+      } catch (e) {
+        console.error('Error reading from localStorage:', e)
+        return false
+      }
     }
   })
 
-  // Track the total like count, starting with hearts from API
-  // If user has already liked it from localStorage, make sure UI is consistent
-  const [likeCount, setLikeCount] = useState(
-    isLiked ? Math.max(initialHearts, 1) : initialHearts
-  )
+  const [likeCount, setLikeCount] = useState(initialHearts || 0)
 
-  // Update localStorage when like status changes
+  // Only update localStorage for anonymous users
   const updateLocalStorage = (isLiked) => {
-    const likedPosts = JSON.parse(localStorage.getItem('likedPosts') || '[]')
+    if (!isAuthenticated) {
+      const likedPosts = JSON.parse(localStorage.getItem('likedPosts') || '[]')
 
-    if (isLiked) {
-      if (!likedPosts.includes(thoughtId)) {
-        localStorage.setItem(
-          'likedPosts',
-          JSON.stringify([...likedPosts, thoughtId])
-        )
-        window.dispatchEvent(new Event('localStorageUpdated')) // This is crucial
+      if (isLiked) {
+        if (!likedPosts.includes(thoughtId)) {
+          localStorage.setItem(
+            'likedPosts',
+            JSON.stringify([...likedPosts, thoughtId])
+          )
+        }
+      } else {
+        const updatedLikes = likedPosts.filter((postId) => postId !== thoughtId)
+        localStorage.setItem('likedPosts', JSON.stringify(updatedLikes))
       }
-    } else {
-      const updatedLikes = likedPosts.filter((postId) => postId !== thoughtId)
-      localStorage.setItem('likedPosts', JSON.stringify(updatedLikes))
-      window.dispatchEvent(new Event('localStorageUpdated')) // This is crucial
+
+      window.dispatchEvent(new Event('localStorageUpdated'))
     }
   }
 
@@ -45,27 +57,34 @@ export const useLikeSystem = (thoughtId, initialHearts) => {
     const newLikedState = !isLiked
     setIsLiked(newLikedState)
     setLikeCount((prevCount) => (newLikedState ? prevCount + 1 : prevCount - 1))
-    updateLocalStorage(newLikedState)
 
-    // ✅ FIX: Make API call for both like AND unlike
+    // Only update localStorage for anonymous users
+    if (!isAuthenticated) {
+      updateLocalStorage(newLikedState)
+    }
+
+    // Send the action parameter based on new state
+    const action = newLikedState ? 'like' : 'unlike'
     api
-      .likeThought(thoughtId)
+      .likeThought(thoughtId, action)
       .then((data) => {
-        console.log('Response data:', data)
         // Update like count with the server's value
-        if (data && typeof data.hearts === 'number') {
-          setLikeCount(data.hearts)
+        if (data && data.success && typeof data.response?.hearts === 'number') {
+          setLikeCount(data.response.hearts)
         }
       })
       .catch((error) => {
         console.error('Error updating like status:', error)
 
         // Revert UI changes on error
-        setIsLiked(!newLikedState) // Revert to previous state
+        setIsLiked(!newLikedState)
         setLikeCount((prevCount) =>
           newLikedState ? prevCount - 1 : prevCount + 1
         )
-        updateLocalStorage(!newLikedState) // Revert localStorage
+
+        if (!isAuthenticated) {
+          updateLocalStorage(!newLikedState)
+        }
       })
   }
 

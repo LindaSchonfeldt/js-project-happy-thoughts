@@ -2,7 +2,8 @@ import React, { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import styled from 'styled-components'
 
-import { useThoughts } from '../contexts/ThoughtsContext'
+import { api } from '../api/api'
+import { useAuth } from '../contexts/AuthContext'
 import { Loader } from './Loader'
 import { Pagination } from './Pagination'
 import { Thought } from './Thought'
@@ -28,67 +29,126 @@ const EmptyState = styled.p`
   color: #888;
 `
 
+const AuthMessageContainer = styled.div`
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  height: 100vh;
+  text-align: center;
+  padding: 20px;
+  max-width: 600px;
+  margin: 32px auto;
+`
+
+const AuthTitle = styled.h2`
+  font-family: 'Roboto Mono', monospace;
+  font-size: 24px;
+  text-align: center;
+  margin-bottom: 20px;
+`
+
+const AuthText = styled.p`
+  color: #555;
+  margin-bottom: 20px;
+`
+
 export const LikedThoughts = () => {
-  // Add state for liked thoughts
-  const [filteredThoughts, setFilteredThoughts] = useState([]) // Renamed from likedThoughts to filteredThoughts
-  const [loadingLikes, setLoadingLikes] = useState(false)
-  // Add pagination state
-  const [currentPage, setCurrentPage] = useState(1)
-  const [totalPages, setTotalPages] = useState(1)
-  const [allLikedThoughts, setAllLikedThoughts] = useState([]) // Store all liked thoughts
-
-  const { thoughts, loading, error, deleteThought, updateThought } =
-    useThoughts()
-
+  const { isAuthenticated } = useAuth()
   const navigate = useNavigate()
 
-  // Find all liked thoughts first
+  const [allLikedThoughts, setAllLikedThoughts] = useState([])
+  const [filteredThoughts, setFilteredThoughts] = useState([]) // <-- added
+  const [totalPages, setTotalPages] = useState(1) // <-- added
+  const [loading, setLoading] = useState(true)
+  const [currentPage, setCurrentPage] = useState(1)
+  const [error, setError] = useState(null) // <-- added
+  const THOUGHTS_PER_PAGE = 10
+
   useEffect(() => {
-    if (!thoughts || loading) return
-
-    try {
-      // Get liked post IDs from localStorage
-      const likedIds = JSON.parse(localStorage.getItem('likedPosts') || '[]')
-
-      // Filter all thoughts to show only liked ones
-      const liked = thoughts.filter((thought) => likedIds.includes(thought._id))
-      setAllLikedThoughts(liked)
-
-      // Calculate total pages
-      const THOUGHTS_PER_PAGE = 10
-      const calculatedTotalPages = Math.max(
-        1,
-        Math.ceil(liked.length / THOUGHTS_PER_PAGE)
-      )
-      setTotalPages(calculatedTotalPages)
-
-      console.log(
-        `Found ${liked.length} liked thoughts, total pages: ${calculatedTotalPages}`
-      )
-
-      // If current page is beyond total pages, adjust it
-      if (currentPage > calculatedTotalPages && calculatedTotalPages > 0) {
-        setCurrentPage(1)
-        return // This will trigger another effect run with page 1
+    const fetchLiked = async () => {
+      if (!isAuthenticated) {
+        setAllLikedThoughts([]) // <-- use setAllLikedThoughts
+        setLoading(false)
+        return
       }
 
-      // Apply pagination
-      const startIndex = (currentPage - 1) * THOUGHTS_PER_PAGE
-      const endIndex = Math.min(startIndex + THOUGHTS_PER_PAGE, liked.length)
+      setLoading(true)
+      setError(null)
+      try {
+        console.log('Fetching liked thoughts from server...')
+        const result = await api.getLikedThoughts()
+        console.log('getLikedThoughts result:', result)
 
-      // Get current page of liked thoughts
-      const paginatedLikes = liked.slice(startIndex, endIndex)
-      setFilteredThoughts(paginatedLikes)
-
-      console.log(
-        `Page ${currentPage}/${calculatedTotalPages}: displaying ${paginatedLikes.length} liked thoughts`
-      )
-    } catch (e) {
-      console.error('Error getting liked thoughts:', e)
-    } finally {
-      setLoadingLikes(false)
+        if (result && result.success && Array.isArray(result.response)) {
+          setAllLikedThoughts(result.response) // <-- use setAllLikedThoughts
+        } else {
+          setAllLikedThoughts([]) // <-- use setAllLikedThoughts
+          if (result && !result.success) {
+            console.warn('getLikedThoughts returned failure:', result.message)
+            setError(result.message || 'Failed to fetch liked thoughts')
+          }
+        }
+      } catch (err) {
+        console.error('Error fetching liked thoughts:', err)
+        setAllLikedThoughts([]) // <-- use setAllLikedThoughts
+        setError(err.message || 'Network error fetching liked thoughts')
+      } finally {
+        setLoading(false)
+      }
     }
-  }, [thoughts, currentPage, loading])
+
+    fetchLiked()
+  }, [isAuthenticated])
+
+  // Calculate total pages and apply pagination whenever allLikedThoughts or currentPage changes
+  useEffect(() => {
+    if (!allLikedThoughts.length) {
+      setFilteredThoughts([])
+      setTotalPages(1)
+      return
+    }
+
+    // Calculate total pages
+    const calculatedTotalPages = Math.max(
+      1,
+      Math.ceil(allLikedThoughts.length / THOUGHTS_PER_PAGE)
+    )
+    setTotalPages(calculatedTotalPages)
+
+    // If current page is beyond total pages, adjust it
+    if (currentPage > calculatedTotalPages && calculatedTotalPages > 0) {
+      setCurrentPage(1)
+      return // This will trigger another effect run with page 1
+    }
+
+    // Apply pagination
+    const startIndex = (currentPage - 1) * THOUGHTS_PER_PAGE
+    const endIndex = Math.min(
+      startIndex + THOUGHTS_PER_PAGE,
+      allLikedThoughts.length
+    )
+
+    const paginatedLikes = allLikedThoughts.slice(startIndex, endIndex)
+    setFilteredThoughts(paginatedLikes)
+
+    console.log(
+      `Page ${currentPage}/${calculatedTotalPages}: displaying ${paginatedLikes.length} liked thoughts`
+    )
+  }, [allLikedThoughts, currentPage])
+
+  // Handler for deleting a thought (updates UI and list)
+  const deleteThought = async (id) => {
+    try {
+      const res = await api.deleteThought(id)
+      if (res && res.success) {
+        setAllLikedThoughts((prev) => prev.filter((t) => t._id !== id))
+      } else {
+        setError(res.message || 'Failed to delete thought')
+      }
+    } catch (err) {
+      setError(err.message || 'Network error deleting thought')
+    }
+  }
 
   // Handler for page changes
   const handlePageChange = (newPage) => {
@@ -99,11 +159,24 @@ export const LikedThoughts = () => {
 
   // Handler for opening update modal
   const handleOpenUpdateModal = (thought) => {
-    // Implementation for opening update modal
+    // Implementation for opening update modal (wire into your App if needed)
+    console.log('Open update modal for', thought?._id)
   }
 
-  if (loading || loadingLikes) {
+  if (loading) {
     return <Loader message='Loading your liked thoughts...' />
+  }
+
+  if (!isAuthenticated) {
+    return (
+      <AuthMessageContainer>
+        <AuthTitle>Authentication Required</AuthTitle>
+        <AuthText>
+          You need to be logged in to see your liked thoughts. This helps us
+          keep track of which thoughts you've enjoyed!
+        </AuthText>
+      </AuthMessageContainer>
+    )
   }
 
   return (

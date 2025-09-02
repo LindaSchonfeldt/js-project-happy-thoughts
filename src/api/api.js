@@ -65,13 +65,16 @@ const extractHashtags = (message) => {
  * @param {object} options
  * @param {number} timeoutMs
  */
-export function fetchWithTimeout(url, options = {}, timeoutMs = 20000) {
+export async function fetchWithTimeout(url, options = {}, timeoutMs = 20000) {
   const controller = new AbortController()
   const timeoutId = setTimeout(() => controller.abort(), timeoutMs)
 
-  return fetch(url, { ...options, signal: controller.signal }).finally(() =>
+  try {
+    return await fetch(url, { ...options, signal: controller.signal })
+  } finally {
+    // clear timeout but do NOT return its result — that would override the fetch result
     clearTimeout(timeoutId)
-  )
+  }
 }
 
 /**
@@ -306,46 +309,49 @@ export const api = {
   },
 
   // Like thought - NO authentication required
-  likeThought: async (id, retryCount = 0) => {
+  likeThought: async (id, action = 'like') => {
     console.log('API: Liking thought:', id)
 
     return deduplicateRequest(`like-${id}`, async () => {
       try {
+        const token = localStorage.getItem('token') // <-- add this
         // Log what we're about to do
-        console.log(`Making POST request to like thought: ${id}`)
+        console.log(`Making POST request to like thought: ${id}`, {
+          action,
+          hasToken: !!token
+        })
 
         // Make the API call - fetchWithRetry returns parsed JSON, not Response object
         const result = await fetchWithRetry(
           `${API_BASE_URL}/thoughts/${id}/like`,
           {
             method: 'POST',
-            headers: getAuthHeaders(false)
+            headers: {
+              'Content-Type': 'application/json',
+              ...(token ? { Authorization: `Bearer ${token}` } : {})
+            },
+            body: JSON.stringify({ action }) // Send the intended action
           }
         )
 
         console.log('Parsed like response:', result)
 
-        // If result has a success property that's true, return it directly
         if (result && result.success === true) {
           return {
             success: true,
-            hearts: result.data?.hearts || result.hearts || null,
-            message: result.message || 'Like successful'
+            hearts: result.data?.hearts || result.response?.hearts || null,
+            message: result.message || 'Like successful',
+            response: result.response || result.data || result
           }
         }
 
-        // If the result indicates failure but we made it this far,
-        // return a success anyway since the API call went through
         return {
           success: true,
           hearts: null,
           message: 'Like operation completed'
         }
       } catch (error) {
-        // This catches network errors or any uncaught exceptions
         console.error('Caught error in likeThought:', error)
-
-        // Return a failure object that won't cause further errors
         return {
           success: false,
           hearts: null,
@@ -587,51 +593,29 @@ export const api = {
   getLikedThoughts: async () => {
     try {
       const token = localStorage.getItem('token')
-      if (!token) {
-        return {
-          success: false,
-          data: [],
-          message: 'Not authenticated'
-        }
-      }
-
-      const response = await fetchWithRetry(
-        `${API_BASE_URL}/users/liked-thoughts`,
-        {
-          method: 'GET',
-          headers: {
-            'Content-Type': 'application/json',
-            Authorization: `Bearer ${token}`
-          }
-        }
+      console.log(
+        `Fetching liked thoughts with token: ${token?.substring(0, 15)}...`
       )
+      const url = `${API_BASE_URL}/users/liked-thoughts`
+      console.log(`Making request to: ${url}`)
 
-      if (!response.ok) {
-        if (response.status === 401) {
-          return {
-            success: false,
-            data: [],
-            message: 'Not authenticated'
-          }
+      const response = await fetch(url, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`
         }
-        throw new Error(`Failed to fetch liked thoughts: ${response.status}`)
-      }
+      })
 
-      const responseData = await response.json()
-
-      // Simply pass through the backend response structure
+      const data = await response.json()
       return {
-        success: responseData.success,
-        data: responseData.data, // Keep data as data
-        message: responseData.message
+        success: response.ok,
+        response: data.response || [],
+        message: data.message || ''
       }
     } catch (error) {
-      console.error('Error fetching liked thoughts:', error)
-      return {
-        success: false,
-        data: [], // Use data instead of response.thoughts
-        message: error.message || 'An unexpected error occurred'
-      }
+      console.error('getLikedThoughts network error:', error)
+      return { success: false, message: 'Network error' }
     }
   }
 }
