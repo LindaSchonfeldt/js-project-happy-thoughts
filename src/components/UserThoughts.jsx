@@ -3,18 +3,18 @@
  * Purpose: Displays thoughts created by the authenticated user.
  * Usage: Used in user profile and dashboard views.
  * Author: Linda Schonfeldt
- * Last Updated: September 2, 2025
+ * Last Updated: October 26, 2026
  */
-import { jwtDecode } from 'jwt-decode'
-import React, { useEffect, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import React, { useCallback, useEffect, useState } from 'react'
 import styled from 'styled-components'
 
+import { api } from '../api/api'
 import { useThoughts } from '../contexts/ThoughtsContext'
 import { Loader } from './Loader'
 import { Pagination } from './Pagination'
 import { Thought } from './Thought'
 import { ThoughtCounter } from './ThoughtCounter'
+import { UpdateModal } from './UpdateModal'
 
 const UserThoughtsContainer = styled.div`
   max-width: 800px;
@@ -36,130 +36,62 @@ const EmptyState = styled.p`
   color: #666;
 `
 
-export const UserThoughts = () => {
-  // Debug mode
-  const DEBUG = true
+const THOUGHTS_PER_PAGE = 10
 
-  // Pagination state
+export const UserThoughts = () => {
+  const [thoughts, setThoughts] = useState([])
   const [currentPage, setCurrentPage] = useState(1)
   const [totalPages, setTotalPages] = useState(1)
-  const [filteredThoughts, setFilteredThoughts] = useState([])
   const [isLoading, setIsLoading] = useState(true)
-  const [allUserThoughts, setAllUserThoughts] = useState([])
+  const [error, setError] = useState(null)
+  const [updatingThought, setUpdatingThought] = useState(null)
 
-  const { thoughts, loading, error, deleteThought, updateThought } =
-    useThoughts()
-  const navigate = useNavigate()
+  const { deleteThought, updateThought } = useThoughts()
 
-  const getCurrentUserId = () => {
-    try {
-      const token = localStorage.getItem('token')
-      if (!token) return null
-
-      const decoded = jwtDecode(token)
-      return decoded.userId || decoded.id || decoded.sub
-    } catch (error) {
-      console.error('Error decoding token:', error)
-      return null
-    }
-  }
-
-  const currentUserId = getCurrentUserId()
-
-  // Combined effect for filtering and pagination to avoid race conditions
-  useEffect(() => {
-    if (!thoughts || loading) return
+  // Fetch only this user's thoughts from the API (server-side filtering + paging)
+  const fetchUserThoughts = useCallback(async (page) => {
     setIsLoading(true)
+    setError(null)
 
-    try {
-      // Step 1: Filter thoughts for current user
-      const myThoughts = thoughts.filter((thought) => {
-        const thoughtUserId =
-          thought.userId || thought.user?._id || thought.user
-        const isOwn = thoughtUserId === currentUserId
-        if (DEBUG) {
-          console.log(
-            `Thought ${thought._id.slice(
-              0,
-              8
-            )}: userId=${thoughtUserId}, currentUser=${currentUserId}, isOwn=${isOwn}`
-          )
-        }
-        return isOwn
-      })
+    const result = await api.getUserThoughts(page, THOUGHTS_PER_PAGE)
 
-      if (DEBUG) {
-        console.log(
-          `Found ${myThoughts.length} thoughts belonging to user ${currentUserId}`
-        )
-      }
-
-      // Step 2: Update filtered thoughts state
-      setAllUserThoughts(myThoughts)
-
-      // Step 3: Calculate pagination in the same effect
-      const THOUGHTS_PER_PAGE = 10
-      const calculatedTotalPages = Math.max(
-        1,
-        Math.ceil(myThoughts.length / THOUGHTS_PER_PAGE)
-      )
-
-      if (DEBUG) {
-        console.log(
-          `Total user thoughts: ${myThoughts.length}, Page size: ${THOUGHTS_PER_PAGE}, Total pages: ${calculatedTotalPages}`
-        )
-      }
-
-      setTotalPages(calculatedTotalPages)
-
-      // Adjust current page if needed
-      if (currentPage > calculatedTotalPages && calculatedTotalPages > 0) {
-        setCurrentPage(1)
-      }
-
-      // Step 4: Calculate the current page's thoughts
-      const startIndex = (currentPage - 1) * THOUGHTS_PER_PAGE
-      const endIndex = Math.min(
-        startIndex + THOUGHTS_PER_PAGE,
-        myThoughts.length
-      )
-
-      if (DEBUG) {
-        console.log(
-          `Displaying thoughts from index ${startIndex} to ${endIndex - 1}`
-        )
-      }
-
-      const paginatedThoughts = myThoughts.slice(startIndex, endIndex)
-      setFilteredThoughts(paginatedThoughts)
-
-      if (DEBUG) {
-        console.log(
-          `Page ${currentPage}/${calculatedTotalPages}: displaying ${paginatedThoughts.length} thoughts`
-        )
-      }
-    } catch (e) {
-      console.error('Error processing user thoughts:', e)
-    } finally {
-      setIsLoading(false)
+    if (result.success) {
+      setThoughts(result.data)
+      setTotalPages(result.totalPages || 1)
+    } else {
+      setThoughts([])
+      setError(result.message)
     }
-  }, [thoughts, currentUserId, loading, currentPage])
 
-  // Handler for page changes
+    setIsLoading(false)
+  }, [])
+
+  useEffect(() => {
+    fetchUserThoughts(currentPage)
+  }, [currentPage, fetchUserThoughts])
+
+  // If the last thought on a page is deleted, step back a page
+  useEffect(() => {
+    if (currentPage > totalPages) setCurrentPage(totalPages)
+  }, [currentPage, totalPages])
+
   const handlePageChange = (newPage) => {
-    console.log(`Changing to page ${newPage}`)
     setCurrentPage(newPage)
     window.scrollTo(0, 0) // Scroll to top when changing pages
   }
 
-  // Handler for opening update modal
-  const handleOpenUpdateModal = (thought) => {
-    // You can implement modal opening logic here
-    // For now, we'll pass the updateThought function directly
-    updateThought(thought._id, thought.message)
+  const handleDelete = async (thoughtId) => {
+    const deleted = await deleteThought(thoughtId)
+    if (deleted) fetchUserThoughts(currentPage)
   }
 
-  if (loading || isLoading) {
+  const handleSaveUpdate = async (updateData) => {
+    const result = await updateThought(updatingThought._id, updateData)
+    if (result.success) fetchUserThoughts(currentPage)
+    return result
+  }
+
+  if (isLoading) {
     return <Loader message='Loading your thoughts...' />
   }
 
@@ -169,17 +101,16 @@ export const UserThoughts = () => {
 
       {error ? (
         <EmptyState>Error loading thoughts: {error}</EmptyState>
-      ) : filteredThoughts.length === 0 ? (
+      ) : thoughts.length === 0 ? (
         <EmptyState>You haven't posted any thoughts yet.</EmptyState>
       ) : (
         <>
           <ThoughtCounter
-            filteredThoughts={filteredThoughts}
+            filteredThoughts={thoughts}
             currentPage={currentPage}
             totalPages={totalPages}
           />
-          {/* Map through filtered thoughts */}
-          {filteredThoughts.map((thought) => (
+          {thoughts.map((thought) => (
             <Thought
               key={thought._id}
               _id={thought._id}
@@ -187,11 +118,11 @@ export const UserThoughts = () => {
               hearts={thought.hearts}
               createdAt={thought.createdAt}
               tags={thought.tags}
-              userId={thought.userId || thought.user?._id || thought.user}
+              userId={thought.userId}
               username={thought.username}
               isAnonymous={!thought.username}
-              onDelete={deleteThought}
-              onUpdate={updateThought}
+              onDelete={handleDelete}
+              onUpdate={setUpdatingThought}
             />
           ))}
         </>
@@ -205,6 +136,13 @@ export const UserThoughts = () => {
           onPageChange={handlePageChange}
         />
       )}
+
+      <UpdateModal
+        isOpen={!!updatingThought}
+        onClose={() => setUpdatingThought(null)}
+        thought={updatingThought}
+        onSave={handleSaveUpdate}
+      />
     </UserThoughtsContainer>
   )
 }

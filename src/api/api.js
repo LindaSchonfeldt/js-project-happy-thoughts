@@ -596,6 +596,34 @@ export const api = {
     }
   },
 
+  // Get the logged-in user's own thoughts - REQUIRES authentication
+  getUserThoughts: async (page = 1, limit = 10) => {
+    try {
+      const token = localStorage.getItem('token')
+      if (!token) {
+        return { success: false, data: [], message: 'Authentication required' }
+      }
+
+      const rawData = await fetchWithRetry(
+        `${API_BASE_URL}/users/thoughts?page=${page}&limit=${limit}`,
+        {
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${token}`
+          }
+        }
+      )
+      return normalizeResponse(rawData)
+    } catch (error) {
+      console.error('getUserThoughts error:', error)
+      return {
+        success: false,
+        data: [],
+        message: error.message || 'Failed to fetch your thoughts'
+      }
+    }
+  },
+
   // Get liked thoughts - REQUIRES authentication
   getLikedThoughts: async () => {
     try {
