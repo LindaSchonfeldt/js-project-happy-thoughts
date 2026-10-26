@@ -20,7 +20,7 @@ import ThoughtForm from './components/ThoughtForm'
 import ThoughtsList from './components/ThoughtsList'
 import { UpdateModal } from './components/UpdateModal'
 import { UserThoughts } from './components/UserThoughts'
-import { AuthProvider } from './contexts/AuthContext'
+import { AuthProvider, useAuth } from './contexts/AuthContext'
 import { useThoughts } from './contexts/ThoughtsContext'
 import { GlobalStyles } from './GlobalStyles'
 
@@ -57,6 +57,7 @@ const AppContent = () => {
     refreshThoughtsOnAuthChange,
     resetToFirstPageOnLogin
   } = useThoughts()
+  const { logout: authLogout } = useAuth()
 
   // Opens the update modal when a thought is selected for editing
   const handleOpenUpdateModal = (thought) => {
@@ -124,8 +125,8 @@ const AppContent = () => {
   const handleLogout = async () => {
     console.log('Logging out and refreshing thoughts')
 
-    // Clear auth data
-    localStorage.removeItem('token')
+    // Clear auth data (both local state and the shared AuthContext)
+    authLogout()
     setToken(null)
     setUser(null)
 

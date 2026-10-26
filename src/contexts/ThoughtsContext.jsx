@@ -207,6 +207,15 @@ const ThoughtsProvider = ({ children }) => {
     }
   }
 
+  // Re-fetch current page so ownership (isOwn) reflects the new auth state
+  const refreshThoughtsOnAuthChange = () => fetchThoughts(currentPage)
+
+  // Jump back to the first page after login
+  const resetToFirstPageOnLogin = () => {
+    setCurrentPage(1)
+    return fetchThoughts(1)
+  }
+
   useEffect(() => {
     fetchThoughts(currentPage)
   }, [currentPage])
@@ -226,7 +235,9 @@ const ThoughtsProvider = ({ children }) => {
         setNotification,
         createThought,
         updateThought,
-        getCurrentUserId
+        getCurrentUserId,
+        refreshThoughtsOnAuthChange,
+        resetToFirstPageOnLogin
       }}
     >
       {children}
