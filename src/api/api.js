@@ -3,7 +3,7 @@
  * Purpose: Handles all HTTP requests to the Happy Thoughts backend API.
  * Usage: Imported by components and hooks for data fetching.
  * Author: Linda Schonfeldt
- * Last Updated: September 2, 2025
+ * Last Updated: October 26, 2026
  */
 // Export API_BASE_URL for backward compatibility
 export const API_BASE_URL = import.meta.env.VITE_API_BASE_URL

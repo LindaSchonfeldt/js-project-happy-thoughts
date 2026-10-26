@@ -3,7 +3,7 @@
  * Purpose: Main React component for Happy Thoughts frontend.
  * Usage: Root component rendered by main.jsx.
  * Author: Linda Schonfeldt
- * Last Updated: September 2, 2025
+ * Last Updated: October 26, 2026
  */
 import React, { useEffect, useState } from 'react'
 import { Route, BrowserRouter as Router, Routes, useLocation } from 'react-router-dom'
